@@ -8,7 +8,8 @@
 We split the process into two steps, a **Detection** and a **Reconstruction** step. Each step is explained below. First, we start with the instance segmentation of the columns, walls and doors classes.
 
 
-1. Semantic Segmentation: PTV3+PPT is an excellent baseline model for unstructured points clouds such as walls and column. However, it doesn't do instance segmentation and thus a clustering must be implemented to achieve an instance segmentation. 
+- Item 1 Semantic Segmentation: PTV3+PPT is an excellent baseline model for unstructured points clouds such as walls and column. However, it doesn't do instance segmentation and thus a clustering must be implemented to achieve an instance segmentation. 
+    - Subitem 1.1 qsdfsdq
 
 2. Instance Segmentation: We can also try to directly compute instances. Good baseline models for intance segmentation OneFormer3D, Mask3D, and PBNet.
 
