@@ -5,10 +5,10 @@ This is the KUL and FBK repo for the [4th International Scan-to-BIM competition]
 ![Alt text](/docs/assets/IMG_Stan_00_General.png "1")
 
 
-We split the process into two steps, a **Detection** and a **Reconstruction** step. Each step is explained below. First, we start with the instance segmentation of the primary (walls, ceilings, floors, columns) and secondary structure classes (windows & doors). In total, 9 tasks are defined. 
+We split the process into two steps, a **Detection** (task 0-4) and a **Reconstruction**(task 5-10) step. In total, 11 tasks are defined. Each step is explained below. First, we start with . 
 
 ## Detection
-
+In the first step, we compute the instance segmentation of the primary (walls, ceilings, floors, columns) and secondary structure classes ( doors). Two scalar field are assigned to the unstructured point clouds. First, a **class label** is computed for every point of the in total 6 classes (0.Floors, 1.Ceilings, 2. Walls, 3.Columns, 4.Doors, 255.Unassigned). Second, an **object label** is assigned to every point and a json is computed with the 3D information of the detected objects. 
 ![Alt text](/docs/assets/detection.PNG "detection")
 
 - **T1. Semantic Segmentation**: [PTV3+PPT](https://github.com/Pointcept/PointTransformerV3) is an excellent baseline model for unstructured points clouds such as walls and column. However, it doesn't do instance segmentation and thus a clustering must be implemented to achieve an instance segmentation. 
@@ -31,7 +31,7 @@ We split the process into two steps, a **Detection** and a **Reconstruction** st
 ## Reconstruction
 ![Alt text](/docs/assets/reconstruction.PNG "reconstruction")
 
-Second, we will perform the reconstruction step. Per convention, walls and columns will be modeled between reference levels, and as such, the first reconstructed ele
+In thhe second step, we compute the parametric information and geometries of the BIM elements. Per convention, BIM models are hierarchically reconstructed starting from the [IfcBuildingStory](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcbuildingstorey.htm) elements, followed by the [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm) and [IfcColumn](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifccolumn.htm) elements. Once the primary building elements are established, the secondary building elements ([IfcDoor](https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcsharedbldgelements/lexical/ifcdoor.htm)), non-metric elements ([IfcSpace](https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcproductextension/lexical/ifcspace.htm)) and wall detailing ([IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm)). To this end, a scene Graph is constructed that links together the different elements. However, as the competition requires very specific geometries, we will also generate the necassary geometry for the competition aswell. 
 
 
 -  **T5. [IfcBuildingStory](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcbuildingstorey.htm)**: For the reference levels, we consider the architectural levels (Finish Floor Level or FFL) since we are modeling the visible construction elements in the architectural domain.
@@ -40,7 +40,7 @@ Second, we will perform the reconstruction step. Per convention, walls and colum
     - Elevation (m): c_z
     - resource (Open3D.TriangleMesh): plane of the storey
 
--  **T6. [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm)**: IfcBuildingElement with the following parameters. Only straight walls are reconstructed in this repo. As such, only coplanar elements can contribute to the parameter estimation. The orthogonal surfaces will be used to define [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm) in T10.
+-  **T6. [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm)**: IfcBuildingElement with the following parameters. Only straight walls are reconstructed in this repo (because they are the only type of wall in the challenge). As such, only coplanar elements can contribute to the parameter estimation. The orthogonal surfaces will be used to define [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm) elements in T10. Note that single-faced walls will be gived a default thickness of 0.1m, according to standard indoor wall. Additionally, the wall thickness will not be clustered (which is typical in a scan-to-bim project), to achieve the highest possible accuracy. 
     - IfcLocalPlacement (m): the two control points at both ends of the wall axis. Note that the wall axis is at the center of the wall. 
     - Wall Thickness (m): uniform distance between both wall faces.
     - base constraint (URI): bottom reference level
@@ -71,6 +71,6 @@ Second, we will perform the reconstruction step. Per convention, walls and colum
     - IfcBuildingStorey (URI): link to reference level
     - resource (Open3D.TriangleMesh): OrientedBoundingBox of the space (slab to slab)
 
--  **T10. [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm)**: Child element of [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm) that defines a boolean operation of subtraction between the geometric bodies of the element and the opening. IfcBuildingElement with the following parameters.
+-  **T10. [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm)**: These are child elements of [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm) to increase the detailing of the initial wall geometry. They define boolean subtraction operations between both geometric bodies of the element and the opening. It has the following parameters.
     - Geometry : The easiest definition is an orientedBoundingBox orthogonal to the wall's axis. This geometry is defined by its parameters (c_x,c_y,c_z,R_x,R_y,R_z,s_u,s_v,s_w) or it's 8 bounding points.
     - resource (Open3D.TriangleMesh): OrientedBoundingBox of the opening
