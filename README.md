@@ -30,7 +30,10 @@ We split the process into two steps, a **Detection** and a **Reconstruction** st
 Second, we will perform the reconstruction step. Per convention, walls and columns will be modeled between reference levels, and as such, the first reconstructed ele
 
 
--  T5. Reference Levels: For the reference levels, we consider the architectural levels since we are modeling the visible construction elements in the architectural domain.
+-  T5. [IfcBuildingStory](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcbuildingstorey.htm): For the reference levels, we consider the architectural levels (Finish Floor Level or FFL) since we are modeling the visible construction elements in the architectural domain.
+    - IfcLocalPlacement (m): center point of the IfcBuildingElement
+    - FootPrint (m): 2D lineset or parametric 2D orientedBoundingBox (c_x,c_y,c_z,R_z,s_u,s_v,s_w)
+    - Elevation (m): c_z
 
 -  T6. [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm): IfcBuildingElement with the following parameters. Only straight walls are reconstructed in this repo
     - IfcLocalPlacement (m): the two control points at both ends of the wall axis. Note that the wall axis is at the center of the wall. 
@@ -42,7 +45,7 @@ Second, we will perform the reconstruction step. Per convention, walls and colum
     - HasOpenings (URI): links through [IfcRelVoidsElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcrelvoidselement.htm) to [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm) objects that define holes in the wall. 
 
 -  T7. [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm): Child element of [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm) that defines a boolean operation of subtraction between the geometric bodies of the element and the opening. IfcBuildingElement with the following parameters.
-    - 
+    - Geometry : The easiest definition is an orientedBoundingBox orthogonal to the wall's axis. This geometry is defined by its parameters (c_x,c_y,c_z,R_x,R_y,R_z,s_u,s_v,s_w) or it's 8 bounding points.
 
 -  T7. [IfcColumn](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifccolumn.htm):  IfcBuildingElement with the following parameters.
     - IfcCircleProfileDef.Radius (m): radius
@@ -52,4 +55,6 @@ Second, we will perform the reconstruction step. Per convention, walls and colum
     - top constraint (URI): top reference level
     - top offset (m): offset from the top constraint level to the top of the IfcBuildingElement
 
--  T8. Reference Levels: 
+-  T8. [IfcSpace](https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcproductextension/lexical/ifcspace.htm): Non-metric element that is defined based on its bounding elements. 
+    - BoundedBy (URI): link to slab and wall elements
+    - IfcBuildingStorey (URI): link to reference level
