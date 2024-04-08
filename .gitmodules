@@ -1,3 +1,5 @@
 [submodule "thirdparty/pointcept"]
 	path = thirdparty/pointcept
 	url = https://github.com/Saiga1105/Pointcept.git
+	fetchRecurseSubmodules = true
+
