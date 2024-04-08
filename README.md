@@ -5,8 +5,8 @@ This is the KUL and FBK repo for the [4th International Scan-to-BIM competition]
 
  
 
-## Detection
-In the first step, we compute the instance segmentation of the primary (walls, ceilings, floors, columns) and secondary structure classes ( doors). Two scalar field are assigned to the unstructured point clouds. First, a **class label** is computed for every point of the in total 6 classes (0.Floors, 1.Ceilings, 2. Walls, 3.Columns, 4.Doors, 255.Unassigned). Second, an **object label** is assigned to every point and a json is computed with the 3D information of the detected objects. 
+## Instance Segmentation
+In the first step, we compute the instance segmentation of the primary (walls, ceilings, floors, columns) and secondary structure classes ( doors, windows). Two scalar field are assigned to the unstructured point clouds. First, a **class label** is computed for every point of the in total 6 classes (0.Floors, 1.Ceilings, 2. Walls, 3.Columns, 4.Doors, 255.Unassigned). Second, an **object label** is assigned to every point and a json is computed with the 3D information of the detected objects. 
 ![Alt text](/docs/assets/detection.PNG "detection")
 
 - **[T1. Semantic Segmentation](./scripts/t1_semantic_segmentation.ipynb)**: [PTV3+PPT](https://github.com/Pointcept/PointTransformerV3) is an excellent baseline model for unstructured points clouds such as walls and column. However, it doesn't do instance segmentation and thus a clustering must be implemented to achieve an instance segmentation. 
@@ -34,28 +34,28 @@ In the second step, we compute the parametric information and geometries of the 
 
 -  **T5. [IfcBuildingStory](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcbuildingstorey.htm)**: For the reference levels, we consider the architectural levels (Finish Floor Level or FFL) since we are modeling the visible construction elements in the architectural domain.
     - IfcLocalPlacement (m): center point of the IfcBuildingElement
-    - FootPrint (m): 2D lineset or parametric 2D orientedBoundingBox (c_x,c_y,c_z,R_z,s_u,s_v,s_w)
+    - FootPrint (m): 2D lineset or parametric 2D orientedBoundingBox (c_x,c_y,c_z,R_z,s_u,s_v)
     - Elevation (m): c_z
-    - resource (Open3D.TriangleMesh): plane of the storey
+    - Resource (Open3D.TriangleMesh): plane of the storey
 
 -  **T6. [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm)**: IfcBuildingElement with the following parameters. Only straight walls are reconstructed in this repo (because they are the only type of wall in the challenge). As such, only coplanar elements can contribute to the parameter estimation. The orthogonal surfaces will be used to define [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm) elements in T10. Note that single-faced walls will be gived a default thickness of 0.1m, according to standard indoor wall. Additionally, the wall thickness will not be clustered (which is typical in a scan-to-bim project), to achieve the highest possible accuracy. 
-    - IfcLocalPlacement (m): the two control points at both ends of the wall axis. Note that the wall axis is at the center of the wall. 
+    - IfcLocalPlacement (p_1,p_2): the two control points at both ends of the wall axis. Note that the wall axis is at the center of the wall. 
     - Wall Thickness (m): uniform distance between both wall faces.
     - base constraint (URI): bottom reference level
     - base offset (m): offset from the base constraint level to the bottom of the IfcBuildingElement
     - top constraint (URI): top reference level
     - top offset (m): offset from the base constraint level to the bottom of the IfcBuildingElement
     - HasOpenings (URI): links through [IfcRelVoidsElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcrelvoidselement.htm) to [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm) objects that define holes in the wall. 
-    - resource (Open3D.TriangleMesh): OrientedBoundingBox of the wall
+    - Resource (Open3D.TriangleMesh): OrientedBoundingBox of the wall
 
 -  **T7. [IfcColumn](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifccolumn.htm)**:  IfcBuildingElement with the following parameters.
     - IfcCircleProfileDef.Radius (m): radius or w,h
-    - IfcLocalPlacement (m): center of column at the base of the column
+    - IfcLocalPlacement (c): center of column at the base of the column
     - base constraint (URI): bottom reference level
     - base offset (m): offset from the base constraint level to the bottom of the IfcBuildingElement
     - top constraint (URI): top reference level
     - top offset (m): offset from the top constraint level to the top of the IfcBuildingElement
-    - resource (Open3D.TriangleMesh): cylinder or orientedBoundingBox
+    - Resource (Open3D.TriangleMesh): cylinder or orientedBoundingBox
 
 -  **T8. [IfcDoor](https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcsharedbldgelements/lexical/ifcdoor.htm)**: Secondary IfcBuildingElement with the following parameters.
     - width (m): w
@@ -67,8 +67,9 @@ In the second step, we compute the parametric information and geometries of the 
 -  **T9. [IfcSpace](https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcproductextension/lexical/ifcspace.htm)**: Non-metric element that is defined based on its bounding elements. 
     - BoundedBy (URI): link to slab and wall elements
     - IfcBuildingStorey (URI): link to reference level
-    - resource (Open3D.TriangleMesh): OrientedBoundingBox of the space (slab to slab)
+    - Resource (Open3D.TriangleMesh): OrientedBoundingBox of the space (slab to slab)
 
 -  **T10. [IfcOpeningElement](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcopeningelement.htm)**: These are child elements of [IfcWallStandardCase](https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcsharedbldgelements/lexical/ifcwallstandardcase.htm) to increase the detailing of the initial wall geometry. They define boolean subtraction operations between both geometric bodies of the element and the opening. It has the following parameters.
-    - Geometry : The easiest definition is an orientedBoundingBox orthogonal to the wall's axis. This geometry is defined by its parameters (c_x,c_y,c_z,R_x,R_y,R_z,s_u,s_v,s_w) or it's 8 bounding points.
-    - resource (Open3D.TriangleMesh): OrientedBoundingBox of the opening
+    - Geometry (c_x,c_y,c_z,R_x,R_y,R_z,s_u,s_v,s_w) : The easiest definition is an orientedBoundingBox orthogonal to the wall's axis. This geometry is defined by its parameters (c_x,c_y,c_z,R_x,R_y,R_z,s_u,s_v,s_w) or it's 8 bounding points.
+    - Resource (Open3D.OrientedBoundingBox): OrientedBoundingBox of the opening
+    - HasOpenings (Inverse IfcRelVoidsElement URI)
