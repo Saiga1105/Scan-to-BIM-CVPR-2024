@@ -1,3 +1,3 @@
-[submodule "3rdparty/Pointcept"]
-	path = 3rdparty/Pointcept
+[submodule "thirdparty/pointcept"]
+	path = thirdparty/pointcept
 	url = https://github.com/Saiga1105/Pointcept.git
