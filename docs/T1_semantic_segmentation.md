@@ -1,10 +1,71 @@
 # T1. Semantic Segmentation
 
+## steps to get PointCept running on remote Linux
+- pull submodule
+```bash
+git submodule init
+git submodule update
+```
+- create environment
+
+```bash
+conda create -n pointcept python=3.10 -y
+conda activate pointcept
+conda install ninja -y
+# Using latest PyTorch (2.2.1) with CUDA 12.1  ->  kul has cuda 12.4 and torch 2.2.2, gcc (GCC) 13.2.1 
+# Install it using Conda, otherwise it will cause problems later
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+
+conda install h5py pyyaml -c anaconda -y
+conda install sharedarray tensorboard tensorboardx yapf addict einops scipy plyfile termcolor timm -c conda-forge -y
+conda install pytorch-cluster pytorch-scatter pytorch-sparse -c pyg -y
+pip install torch-geometric
+
+pip install open3d
+pip install spconv-cu120
+pip install geomapi
+pip install laspy[lazrs,laszip]
+
+```
+-PROBLEMS iwht pointops:
+    -> error: #error -- unsupported GNU version! gcc versions later than 12 are not supported! The nvcc flag '-allow-unsupported-compiler' -> solved: conda install -c conda-forge gcc=10
+     -> cannot execute 'cc1plus': execvp: No such file or directory -> export PATH="/usr/bin/g++:$PATH"
+     -> conda remove gcc gxx -> conda install gxx=10.2.1
+     -> conda install -c conda-forge gcc_linux-64=10 gxx_linux-64=10
+     -> ln -sf conda-forge gcc 10.4.0-17 /path/to/g++
+    -> gcc_path=$(command -v gcc)
+    -> cd ~
+    -> ln -sf $gcc_path ~/g++
+
+
+
+- compile pointops
+```bash
+# Be sure to have CUDA runtime installed and working (nvcc)
+cd 3rdparty/Pointcept/libs/pointops
+python setup.py install
+cd ../../../..
+```
+- compile pointgroup_ops
+```bash
+# Be sure to have CUDA runtime installed and working (nvcc)
+cd 3rdparty/Pointcept/libs/pointgroup_ops/
+python setup.py install --include_dirs=${CONDA_PREFIX}/include  
+cd ../../../..
+```
+
+- create symbolic link to the data
+```bash
+# put data on GPU server
+ln -s /geomatics/gpuserver-0/mbassier/2024-04\ Benchmark\ CVPR\ scan-to-BIM/ data
+```
+
+
+
 
 ## steps to get PTv3 running on remote Linux
 
 - clone repo on linux machine
-
 
 - create environment
 ```bash
