@@ -1,0 +1,29 @@
+Ubuntu 20.04 with CUDA 12.4 on GTX 1070 Ti
+
+conda create -n pointcept python=3.10 -y
+conda activate pointcept
+conda install ninja -y
+
+# Using latest PyTorch (2.2.1) with CUDA 12.1
+# Install it using Conda, otherwise it will cause problems later
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+
+conda install h5py pyyaml -c anaconda -y
+conda install sharedarray tensorboard tensorboardx yapf addict einops scipy plyfile termcolor timm -c conda-forge
+conda install pytorch-cluster pytorch-scatter pytorch-sparse -c pyg
+pip install torch-geometric
+git clone https://github.com/Pointcept/Pointcept.git
+
+# Be sure to have CUDA runtime installed and working (nvcc)
+cd Pointcept/libs/pointops
+python setup.py install
+
+conda install -c bioconda google-sparsehash
+cd libs/pointgroup_ops/
+python setup.py install --include_dirs=${CONDA_PREFIX}/include  
+
+pip install open3d
+pip install spconv-cu120
+
+pip install geomapi
+pip install laspy[lazrs,laszip]
