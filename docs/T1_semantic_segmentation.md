@@ -66,6 +66,11 @@ export PYTHONPATH="/home/mbassier/code/Scan-to-BIM-CVPR-2024/thirdparty:$PYTHONP
 python thirdparty/pointcept/pointcept/tools/inference_kul.py --config-file configs/kul/kul-pt-v3-base.py --options save_path=../../data/t1_data_test/result weight=../../data/t1_data_test/model/model_best.pth
 ```
 
+- run inference with existing model
+```bash
+export PYTHONPATH="/home/mbassier/code/Scan-to-BIM-CVPR-2024/thirdparty:$PYTHONPATH" # python path needs to be explicity located as submodule is otherwise not recognised
+python thirdparty/pointcept/pointcept/tools/inference_kul.py --config-file configs/kul/kul-pt-v3-base.py --options save_path=../../data/t1_data_test/result weight=../../data/t1_data_test/model/model_best.pth
+```
 
 ## steps to get PTv3 running on remote Linux
 
