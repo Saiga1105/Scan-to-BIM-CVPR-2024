@@ -1,0 +1,643 @@
+.
+├── data -> /geomatics/gpuserver-0/mbassier/2024-04 Benchmark CVPR scan-to-BIM/
+├── docs
+│   ├── assets
+│   │   ├── detection.PNG
+│   │   ├── IMG_SCAN2BIM_1.png
+│   │   ├── IMG_Scan2BIM_4.PNG
+│   │   ├── IMG_Stan_00_General.png
+│   │   ├── IMG_Topology_1.PNG
+│   │   └── reconstruction.PNG
+│   ├── installation_steps.txt
+│   └── T1_semantic_segmentation.md
+├── LICENSE
+├── panocreation.ipynb
+├── README.md
+├── requirements.txt
+├── scripts
+│   ├── context.py
+│   ├── __pycache__
+│   │   └── context.cpython-310.pyc
+│   ├── t0_data_preperation.ipynb
+│   ├── t1_semantic_segmentation_fbk_server.ipynb
+│   ├── t1_semantic_segmentation.ipynb
+│   ├── t1_semantic_segmentation_kul_server.ipynb
+│   ├── t2_instance_segmentation.ipynb
+│   ├── t3_object_detection.ipynb
+│   ├── t4_geometric_filtering.ipynb
+│   ├── t5_reference_levels.ipynb
+│   ├── t6_wall_reconstruction.ipynb
+│   ├── t7_column_reconstruction.ipynb
+│   ├── t8_door_reconstruction.ipynb
+│   ├── t9_room_reconstruction.ipynb
+│   └── test.py
+├── thirdparty
+│   ├── __init__.py
+│   ├── pointcept
+│   │   ├── configs
+│   │   │   ├── 3dom
+│   │   │   │   ├── 3dom-features-pt-v3-base.py
+│   │   │   │   └── 3dom-pt-v3-base.py
+│   │   │   ├── _base_
+│   │   │   │   └── default_runtime.py
+│   │   │   ├── kul
+│   │   │   │   └── kul-pt-v3-base.py
+│   │   │   ├── modelnet40
+│   │   │   │   └── cls-spunet-v1m1-0-base.py
+│   │   │   ├── nuscenes
+│   │   │   │   ├── semseg-ppt-v1m1-0-nu-sk-wa-spunet.py
+│   │   │   │   ├── semseg-ppt-v1m2-0-nu-sk-wa-spunet.py
+│   │   │   │   ├── semseg-ppt-v1m2-1-nu-sk-wa-spunet-submit.py
+│   │   │   │   ├── semseg-pt-v2m2-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-1-benchmark-submit.py
+│   │   │   │   ├── semseg-pt-v3m1-0-base.py
+│   │   │   │   └── semseg-spunet-v1m1-0-base.py
+│   │   │   ├── s3dis
+│   │   │   │   ├── insseg-pointgroup-v1m1-0-spunet-base.py
+│   │   │   │   ├── insseg-pointgroup-v1m1-0-spunet-base-vs0p02.py
+│   │   │   │   ├── insseg-pointgroup-v1m1-0-spunet-base-vs0p02-sc-aug.py
+│   │   │   │   ├── insseg-ppt-v1m1-0-pointgroup-spunet-ft.py
+│   │   │   │   ├── insseg-ppt-v1m1-0-pointgroup-spunet-ft-vs0p05.py
+│   │   │   │   ├── semseg-minkunet34c-0-base.py
+│   │   │   │   ├── semseg-ppt-v1m1-0-s3-sc-st-spunet.py
+│   │   │   │   ├── semseg-pt-v1-0-base.py
+│   │   │   │   ├── semseg-pt-v2m1-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-0-lovasz.py
+│   │   │   │   ├── semseg-pt-v2m2-1-one-cycle.py
+│   │   │   │   ├── semseg-pt-v3m1-0-rpe.py
+│   │   │   │   ├── semseg-pt-v3m1-1-ppt-extreme.py
+│   │   │   │   ├── semseg-spunet-v1m1-0-base.py
+│   │   │   │   ├── semseg-spunet-v1m1-0-cn-base.py
+│   │   │   │   ├── semseg-spunet-v1m2-0-base.py
+│   │   │   │   ├── semseg-swin3d-v1m1-0-small.py
+│   │   │   │   └── semseg-swin3d-v1m1-1-large.py
+│   │   │   ├── scannet
+│   │   │   │   ├── insseg-pointgroup-v1m1-0-spunet-base.py
+│   │   │   │   ├── insseg-ppt-v1m1-0-pointgroup-spunet-ft.py
+│   │   │   │   ├── objdet-cagroup3d-v1m1-0-base.py
+│   │   │   │   ├── pretrain-msc-v1m1-0-spunet-base.py
+│   │   │   │   ├── pretrain-msc-v1m1-1-spunet-pointcontrast.py
+│   │   │   │   ├── pretrain-msc-v1m2-0-spunet-csc.py
+│   │   │   │   ├── semseg-cac-v1m1-0-spunet-base.py
+│   │   │   │   ├── semseg-cac-v1m1-1-spunet-lovasz.py
+│   │   │   │   ├── semseg-cac-v1m1-2-ptv2-lovasz.py
+│   │   │   │   ├── semseg-minkunet34c-0-base.py
+│   │   │   │   ├── semseg-oacnns-v1m1-0-base.py
+│   │   │   │   ├── semseg-octformer-v1m1-0-base.py
+│   │   │   │   ├── semseg-ppt-v1m1-0-sc-st-spunet.py
+│   │   │   │   ├── semseg-ppt-v1m1-1-sc-st-spunet-submit.py
+│   │   │   │   ├── semseg-pt-v1-0-base.py
+│   │   │   │   ├── semseg-pt-v2m1-0-origin.py
+│   │   │   │   ├── semseg-pt-v2m2-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-1-benchmark-submit.py
+│   │   │   │   ├── semseg-pt-v2m2-2-precise-evaluate.py
+│   │   │   │   ├── semseg-pt-v2m2-3-lovasz.py
+│   │   │   │   ├── semseg-pt-v3m1-0-base.py
+│   │   │   │   ├── semseg-pt-v3m1-1-ppt-extreme.py
+│   │   │   │   ├── semseg-spunet-v1m1-0-base.py
+│   │   │   │   ├── semseg-spunet-v1m1-1-interp-eval.py
+│   │   │   │   ├── semseg-spunet-v1m1-1-precise-eval.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-la100.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-la200.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-la20.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-la50.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-lr10.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-lr1.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-lr20.py
+│   │   │   │   ├── semseg-spunet-v1m1-2-efficient-lr5.py
+│   │   │   │   ├── semseg-spunet-v1m1-3-enable-profiler.py
+│   │   │   │   ├── semseg-spunet-v1m1-4-ft.py
+│   │   │   │   ├── semseg-spunet-v1m1-5-lovasz.py
+│   │   │   │   ├── semseg-spunet-v1m3-0-pdnorm-base.py
+│   │   │   │   ├── semseg-st-v1m1-0-origin.py
+│   │   │   │   ├── semseg-st-v1m2-0-refined.py
+│   │   │   │   ├── semseg-swin3d-v1m1-0-small.py
+│   │   │   │   └── semseg-swin3d-v1m1-1-large.py
+│   │   │   ├── scannet200
+│   │   │   │   ├── insseg-pointgroup-spunet-0-base.py
+│   │   │   │   ├── semseg-cac-v1m1-0-spunet-base.py
+│   │   │   │   ├── semseg-cac-v1m1-1-spunet-lovasz.py
+│   │   │   │   ├── semseg-cac-v1m1-2-ptv2-lovasz.py
+│   │   │   │   ├── semseg-minkunet34c-0-base.py
+│   │   │   │   ├── semseg-pt-v1-0-base.py
+│   │   │   │   ├── semseg-pt-v2m1-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-1-benchmark-submit.py
+│   │   │   │   ├── semseg-pt-v2m2-2-lovasz.py
+│   │   │   │   ├── semseg-pt-v3m1-0-base.py
+│   │   │   │   ├── semseg-pt-v3m1-1-ppt-ft.py
+│   │   │   │   ├── semseg-spunet-v1m1-0-base.py
+│   │   │   │   ├── semseg-spunet-v1m1-1-lovasz.py
+│   │   │   │   └── semseg-st-v1m2-0-refined.py
+│   │   │   ├── semantic_kitti
+│   │   │   │   ├── semseg-minkunet34c-0-base.py
+│   │   │   │   ├── semseg-ppt-v1m1-0-sk-nu-wa-spunet.py
+│   │   │   │   ├── semseg-ppt-v1m2-0-sk-nu-wa-spunet.py
+│   │   │   │   ├── semseg-ppt-v1m2-0-sk-nu-wa-spunet-submit.py
+│   │   │   │   ├── semseg-pt-v2m2-0-base.py
+│   │   │   │   ├── semseg-pt-v2m2-1-benchmark-submit.py
+│   │   │   │   ├── semseg-spunet-v1m1-0-base.py
+│   │   │   │   └── semseg-spvcnn-v1m1-0-base.py
+│   │   │   ├── structured3d
+│   │   │   │   ├── semseg-pt-v2m2-0-base.py
+│   │   │   │   ├── semseg-spunet-v1m1-0-base.py
+│   │   │   │   ├── semseg-swin3d-v1m1-0-small.py
+│   │   │   │   └── semseg-swin3d-v1m1-1-large.py
+│   │   │   └── waymo
+│   │   │       ├── semseg-pt-v3m1-0-base.py
+│   │   │       └── semseg-spunet-v1m1-0-base.py
+│   │   ├── docs
+│   │   │   ├── logo_dark.png
+│   │   │   ├── logo.png
+│   │   │   ├── offset_dark.png
+│   │   │   └── offset.png
+│   │   ├── libs
+│   │   │   ├── pointgroup_ops
+│   │   │   │   ├── build
+│   │   │   │   │   ├── bdist.linux-x86_64
+│   │   │   │   │   ├── lib.linux-x86_64-cpython-310
+│   │   │   │   │   │   ├── pointgroup_ops
+│   │   │   │   │   │   │   ├── functions.py
+│   │   │   │   │   │   │   └── __init__.py
+│   │   │   │   │   │   └── pointgroup_ops_cuda.cpython-310-x86_64-linux-gnu.so
+│   │   │   │   │   └── temp.linux-x86_64-cpython-310
+│   │   │   │   │       ├── build.ninja
+│   │   │   │   │       └── src
+│   │   │   │   │           ├── bfs_cluster_kernel.o
+│   │   │   │   │           └── bfs_cluster.o
+│   │   │   │   ├── dist
+│   │   │   │   │   └── pointgroup_ops-0.0.0-py3.10-linux-x86_64.egg
+│   │   │   │   ├── functions
+│   │   │   │   │   ├── functions.py
+│   │   │   │   │   └── __init__.py
+│   │   │   │   ├── pointgroup_ops.egg-info
+│   │   │   │   │   ├── dependency_links.txt
+│   │   │   │   │   ├── PKG-INFO
+│   │   │   │   │   ├── SOURCES.txt
+│   │   │   │   │   └── top_level.txt
+│   │   │   │   ├── setup.py
+│   │   │   │   └── src
+│   │   │   │       ├── bfs_cluster.cpp
+│   │   │   │       └── bfs_cluster_kernel.cu
+│   │   │   ├── pointops
+│   │   │   │   ├── build
+│   │   │   │   │   ├── bdist.linux-x86_64
+│   │   │   │   │   ├── lib.linux-x86_64-cpython-310
+│   │   │   │   │   │   └── pointops
+│   │   │   │   │   │       ├── aggregation.py
+│   │   │   │   │   │       ├── attention.py
+│   │   │   │   │   │       ├── _C.cpython-310-x86_64-linux-gnu.so
+│   │   │   │   │   │       ├── grouping.py
+│   │   │   │   │   │       ├── __init__.py
+│   │   │   │   │   │       ├── interpolation.py
+│   │   │   │   │   │       ├── query.py
+│   │   │   │   │   │       ├── sampling.py
+│   │   │   │   │   │       ├── subtraction.py
+│   │   │   │   │   │       └── utils.py
+│   │   │   │   │   └── temp.linux-x86_64-cpython-310
+│   │   │   │   │       ├── build.ninja
+│   │   │   │   │       └── src
+│   │   │   │   │           ├── aggregation
+│   │   │   │   │           │   ├── aggregation_cuda_kernel.o
+│   │   │   │   │           │   └── aggregation_cuda.o
+│   │   │   │   │           ├── attention
+│   │   │   │   │           │   ├── attention_cuda_kernel.o
+│   │   │   │   │           │   └── attention_cuda.o
+│   │   │   │   │           ├── ball_query
+│   │   │   │   │           │   ├── ball_query_cuda_kernel.o
+│   │   │   │   │           │   └── ball_query_cuda.o
+│   │   │   │   │           ├── grouping
+│   │   │   │   │           │   ├── grouping_cuda_kernel.o
+│   │   │   │   │           │   └── grouping_cuda.o
+│   │   │   │   │           ├── interpolation
+│   │   │   │   │           │   ├── interpolation_cuda_kernel.o
+│   │   │   │   │           │   └── interpolation_cuda.o
+│   │   │   │   │           ├── knn_query
+│   │   │   │   │           │   ├── knn_query_cuda_kernel.o
+│   │   │   │   │           │   └── knn_query_cuda.o
+│   │   │   │   │           ├── pointops_api.o
+│   │   │   │   │           ├── random_ball_query
+│   │   │   │   │           │   ├── random_ball_query_cuda_kernel.o
+│   │   │   │   │           │   └── random_ball_query_cuda.o
+│   │   │   │   │           ├── sampling
+│   │   │   │   │           │   ├── sampling_cuda_kernel.o
+│   │   │   │   │           │   └── sampling_cuda.o
+│   │   │   │   │           └── subtraction
+│   │   │   │   │               ├── subtraction_cuda_kernel.o
+│   │   │   │   │               └── subtraction_cuda.o
+│   │   │   │   ├── dist
+│   │   │   │   │   └── pointops-1.0-py3.10-linux-x86_64.egg
+│   │   │   │   ├── functions
+│   │   │   │   │   ├── aggregation.py
+│   │   │   │   │   ├── attention.py
+│   │   │   │   │   ├── grouping.py
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── interpolation.py
+│   │   │   │   │   ├── query.py
+│   │   │   │   │   ├── sampling.py
+│   │   │   │   │   ├── subtraction.py
+│   │   │   │   │   └── utils.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── pointops.egg-info
+│   │   │   │   │   ├── dependency_links.txt
+│   │   │   │   │   ├── PKG-INFO
+│   │   │   │   │   ├── requires.txt
+│   │   │   │   │   ├── SOURCES.txt
+│   │   │   │   │   └── top_level.txt
+│   │   │   │   ├── setup.py
+│   │   │   │   └── src
+│   │   │   │       ├── aggregation
+│   │   │   │       │   ├── aggregation_cuda.cpp
+│   │   │   │       │   ├── aggregation_cuda_kernel.cu
+│   │   │   │       │   └── aggregation_cuda_kernel.h
+│   │   │   │       ├── attention
+│   │   │   │       │   ├── attention_cuda.cpp
+│   │   │   │       │   ├── attention_cuda_kernel.cu
+│   │   │   │       │   └── attention_cuda_kernel.h
+│   │   │   │       ├── ball_query
+│   │   │   │       │   ├── ball_query_cuda.cpp
+│   │   │   │       │   ├── ball_query_cuda_kernel.cu
+│   │   │   │       │   └── ball_query_cuda_kernel.h
+│   │   │   │       ├── cuda_utils.h
+│   │   │   │       ├── grouping
+│   │   │   │       │   ├── grouping_cuda.cpp
+│   │   │   │       │   ├── grouping_cuda_kernel.cu
+│   │   │   │       │   └── grouping_cuda_kernel.h
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── interpolation
+│   │   │   │       │   ├── interpolation_cuda.cpp
+│   │   │   │       │   ├── interpolation_cuda_kernel.cu
+│   │   │   │       │   └── interpolation_cuda_kernel.h
+│   │   │   │       ├── knn_query
+│   │   │   │       │   ├── knn_query_cuda.cpp
+│   │   │   │       │   ├── knn_query_cuda_kernel.cu
+│   │   │   │       │   └── knn_query_cuda_kernel.h
+│   │   │   │       ├── pointops_api.cpp
+│   │   │   │       ├── random_ball_query
+│   │   │   │       │   ├── random_ball_query_cuda.cpp
+│   │   │   │       │   ├── random_ball_query_cuda_kernel.cu
+│   │   │   │       │   └── random_ball_query_cuda_kernel.h
+│   │   │   │       ├── sampling
+│   │   │   │       │   ├── sampling_cuda.cpp
+│   │   │   │       │   ├── sampling_cuda_kernel.cu
+│   │   │   │       │   └── sampling_cuda_kernel.h
+│   │   │   │       └── subtraction
+│   │   │   │           ├── subtraction_cuda.cpp
+│   │   │   │           ├── subtraction_cuda_kernel.cu
+│   │   │   │           └── subtraction_cuda_kernel.h
+│   │   │   └── pointops2
+│   │   │       ├── functions
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── pointops2.py
+│   │   │       │   ├── pointops_ablation.py
+│   │   │       │   ├── pointops.py
+│   │   │       │   ├── test_attention_op_step1.py
+│   │   │       │   ├── test_attention_op_step1_v2.py
+│   │   │       │   ├── test_attention_op_step2.py
+│   │   │       │   ├── test_relative_pos_encoding_op_step1.py
+│   │   │       │   ├── test_relative_pos_encoding_op_step1_v2.py
+│   │   │       │   ├── test_relative_pos_encoding_op_step1_v3.py
+│   │   │       │   ├── test_relative_pos_encoding_op_step2.py
+│   │   │       │   └── test_relative_pos_encoding_op_step2_v2.py
+│   │   │       ├── __init__.py
+│   │   │       ├── setup.py
+│   │   │       └── src
+│   │   │           ├── aggregation
+│   │   │           │   ├── aggregation_cuda.cpp
+│   │   │           │   ├── aggregation_cuda_kernel.cu
+│   │   │           │   └── aggregation_cuda_kernel.h
+│   │   │           ├── attention
+│   │   │           │   ├── attention_cuda.cpp
+│   │   │           │   ├── attention_cuda_kernel.cu
+│   │   │           │   └── attention_cuda_kernel.h
+│   │   │           ├── attention_v2
+│   │   │           │   ├── attention_cuda_kernel_v2.cu
+│   │   │           │   ├── attention_cuda_kernel_v2.h
+│   │   │           │   └── attention_cuda_v2.cpp
+│   │   │           ├── cuda_utils.h
+│   │   │           ├── grouping
+│   │   │           │   ├── grouping_cuda.cpp
+│   │   │           │   ├── grouping_cuda_kernel.cu
+│   │   │           │   └── grouping_cuda_kernel.h
+│   │   │           ├── __init__.py
+│   │   │           ├── interpolation
+│   │   │           │   ├── interpolation_cuda.cpp
+│   │   │           │   ├── interpolation_cuda_kernel.cu
+│   │   │           │   └── interpolation_cuda_kernel.h
+│   │   │           ├── knnquery
+│   │   │           │   ├── knnquery_cuda.cpp
+│   │   │           │   ├── knnquery_cuda_kernel.cu
+│   │   │           │   └── knnquery_cuda_kernel.h
+│   │   │           ├── pointops_api.cpp
+│   │   │           ├── rpe
+│   │   │           │   ├── relative_pos_encoding_cuda.cpp
+│   │   │           │   ├── relative_pos_encoding_cuda_kernel.cu
+│   │   │           │   └── relative_pos_encoding_cuda_kernel.h
+│   │   │           ├── rpe_v2
+│   │   │           │   ├── relative_pos_encoding_cuda_kernel_v2.cu
+│   │   │           │   ├── relative_pos_encoding_cuda_kernel_v2.h
+│   │   │           │   └── relative_pos_encoding_cuda_v2.cpp
+│   │   │           ├── sampling
+│   │   │           │   ├── sampling_cuda.cpp
+│   │   │           │   ├── sampling_cuda_kernel.cu
+│   │   │           │   └── sampling_cuda_kernel.h
+│   │   │           └── subtraction
+│   │   │               ├── subtraction_cuda.cpp
+│   │   │               ├── subtraction_cuda_kernel.cu
+│   │   │               └── subtraction_cuda_kernel.h
+│   │   ├── LICENSE
+│   │   ├── pointcept
+│   │   │   ├── datasets
+│   │   │   │   ├── arkitscenes.py
+│   │   │   │   ├── builder.py
+│   │   │   │   ├── dataloader.py
+│   │   │   │   ├── defaults.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── kul.py
+│   │   │   │   ├── modelnet.py
+│   │   │   │   ├── nuscenes.py
+│   │   │   │   ├── preprocessing
+│   │   │   │   │   ├── 3dom
+│   │   │   │   │   │   ├── preprocess_3dom_features.py
+│   │   │   │   │   │   └── preprocess_3dom.py
+│   │   │   │   │   ├── arkitscenes
+│   │   │   │   │   │   └── preprocess_arkitscenes_mesh.py
+│   │   │   │   │   ├── nuscenes
+│   │   │   │   │   │   └── preprocess_nuscenes_info.py
+│   │   │   │   │   ├── s3dis
+│   │   │   │   │   │   ├── preprocess_s3dis.py
+│   │   │   │   │   │   └── preprocess_s3dis_voxelized.py
+│   │   │   │   │   ├── scannet
+│   │   │   │   │   │   ├── meta_data
+│   │   │   │   │   │   │   ├── classes_ObjClassification-ShapeNetCore55.txt
+│   │   │   │   │   │   │   ├── classes_SemVoxLabel-nyu40id.txt
+│   │   │   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   │   │   └── scannet200_constants.cpython-310.pyc
+│   │   │   │   │   │   │   ├── scannet200_constants.py
+│   │   │   │   │   │   │   ├── scannet200_splits.py
+│   │   │   │   │   │   │   ├── scannet_means.npz
+│   │   │   │   │   │   │   ├── scannetv1_test.txt
+│   │   │   │   │   │   │   ├── scannetv1_train.txt
+│   │   │   │   │   │   │   ├── scannetv1_val.txt
+│   │   │   │   │   │   │   ├── scannetv2-labels.combined.tsv
+│   │   │   │   │   │   │   ├── scannetv2-labels-old.combined.tsv
+│   │   │   │   │   │   │   ├── scannetv2_test.txt
+│   │   │   │   │   │   │   ├── scannetv2_train.txt
+│   │   │   │   │   │   │   └── scannetv2_val.txt
+│   │   │   │   │   │   ├── preprocess_scannet.py
+│   │   │   │   │   │   └── scannet_pair
+│   │   │   │   │   │       ├── compute_full_overlapping.py
+│   │   │   │   │   │       ├── generage_list.py
+│   │   │   │   │   │       ├── plyfile.py
+│   │   │   │   │   │       ├── point_cloud_extractor.py
+│   │   │   │   │   │       ├── preprocess.py
+│   │   │   │   │   │       ├── reader.py
+│   │   │   │   │   │       └── SensorData.py
+│   │   │   │   │   ├── structured3d
+│   │   │   │   │   │   └── preprocess_structured3d.py
+│   │   │   │   │   └── waymo
+│   │   │   │   │       └── preprocess_waymo.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── arkitscenes.cpython-310.pyc
+│   │   │   │   │   ├── builder.cpython-310.pyc
+│   │   │   │   │   ├── dataloader.cpython-310.pyc
+│   │   │   │   │   ├── defaults.cpython-310.pyc
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   ├── kul.cpython-310.pyc
+│   │   │   │   │   ├── modelnet.cpython-310.pyc
+│   │   │   │   │   ├── nuscenes.cpython-310.pyc
+│   │   │   │   │   ├── s3dis.cpython-310.pyc
+│   │   │   │   │   ├── scannet.cpython-310.pyc
+│   │   │   │   │   ├── scannet_pair.cpython-310.pyc
+│   │   │   │   │   ├── semantic_kitti.cpython-310.pyc
+│   │   │   │   │   ├── shapenet_part.cpython-310.pyc
+│   │   │   │   │   ├── structure3d.cpython-310.pyc
+│   │   │   │   │   ├── threedom.cpython-310.pyc
+│   │   │   │   │   ├── threedom_features.cpython-310.pyc
+│   │   │   │   │   ├── transform.cpython-310.pyc
+│   │   │   │   │   ├── utils.cpython-310.pyc
+│   │   │   │   │   └── waymo.cpython-310.pyc
+│   │   │   │   ├── s3dis.py
+│   │   │   │   ├── scannet_pair.py
+│   │   │   │   ├── scannet.py
+│   │   │   │   ├── semantic_kitti.py
+│   │   │   │   ├── shapenet_part.py
+│   │   │   │   ├── structure3d.py
+│   │   │   │   ├── threedom_features.py
+│   │   │   │   ├── threedom.py
+│   │   │   │   ├── transform.py
+│   │   │   │   ├── utils.py
+│   │   │   │   └── waymo.py
+│   │   │   ├── engines
+│   │   │   │   ├── defaults.py
+│   │   │   │   ├── hooks
+│   │   │   │   │   ├── builder.py
+│   │   │   │   │   ├── default.py
+│   │   │   │   │   ├── evaluator.py
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   └── misc.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── launch.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── defaults.cpython-310.pyc
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   ├── launch.cpython-310.pyc
+│   │   │   │   │   └── test.cpython-310.pyc
+│   │   │   │   ├── test.py
+│   │   │   │   └── train.py
+│   │   │   ├── __init__.py
+│   │   │   ├── models
+│   │   │   │   ├── builder.py
+│   │   │   │   ├── context_aware_classifier
+│   │   │   │   │   ├── context_aware_classifier_v1m1_base.py
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── context_aware_classifier_v1m1_base.cpython-310.pyc
+│   │   │   │   │       └── __init__.cpython-310.pyc
+│   │   │   │   ├── default.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── losses
+│   │   │   │   │   ├── builder.py
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── lovasz.py
+│   │   │   │   │   ├── misc.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── builder.cpython-310.pyc
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       ├── lovasz.cpython-310.pyc
+│   │   │   │   │       └── misc.cpython-310.pyc
+│   │   │   │   ├── masked_scene_contrast
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── masked_scene_contrast_v1m1_base.py
+│   │   │   │   │   ├── masked_scene_contrast_v1m2_csc.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       ├── masked_scene_contrast_v1m1_base.cpython-310.pyc
+│   │   │   │   │       └── masked_scene_contrast_v1m2_csc.cpython-310.pyc
+│   │   │   │   ├── modules.py
+│   │   │   │   ├── oacnns
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── oacnns_v1m1_base.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       └── oacnns_v1m1_base.cpython-310.pyc
+│   │   │   │   ├── octformer
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── octformer_v1m1_base.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       └── octformer_v1m1_base.cpython-310.pyc
+│   │   │   │   ├── point_group
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── point_group_v1m1_base.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   └── point_group_v1m1_base.cpython-310.pyc
+│   │   │   │   │   └── utils.py
+│   │   │   │   ├── point_prompt_training
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── point_prompt_training_v1m1_language_guided.py
+│   │   │   │   │   ├── point_prompt_training_v1m2_decoupled.py
+│   │   │   │   │   ├── prompt_driven_normalization.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       ├── point_prompt_training_v1m1_language_guided.cpython-310.pyc
+│   │   │   │   │       ├── point_prompt_training_v1m2_decoupled.cpython-310.pyc
+│   │   │   │   │       └── prompt_driven_normalization.cpython-310.pyc
+│   │   │   │   ├── point_transformer
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── point_transformer_cls.py
+│   │   │   │   │   ├── point_transformer_partseg.py
+│   │   │   │   │   ├── point_transformer_seg.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   ├── point_transformer_cls.cpython-310.pyc
+│   │   │   │   │   │   ├── point_transformer_partseg.cpython-310.pyc
+│   │   │   │   │   │   ├── point_transformer_seg.cpython-310.pyc
+│   │   │   │   │   │   └── utils.cpython-310.pyc
+│   │   │   │   │   └── utils.py
+│   │   │   │   ├── point_transformer_v2
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── point_transformer_v2m1_origin.py
+│   │   │   │   │   ├── point_transformer_v2m2_base.py
+│   │   │   │   │   ├── point_transformer_v2m3_pdnorm.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       ├── point_transformer_v2m1_origin.cpython-310.pyc
+│   │   │   │   │       ├── point_transformer_v2m2_base.cpython-310.pyc
+│   │   │   │   │       └── point_transformer_v2m3_pdnorm.cpython-310.pyc
+│   │   │   │   ├── point_transformer_v3
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── point_transformer_v3m1_base.py
+│   │   │   │   │   └── __pycache__
+│   │   │   │   │       ├── __init__.cpython-310.pyc
+│   │   │   │   │       └── point_transformer_v3m1_base.cpython-310.pyc
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── builder.cpython-310.pyc
+│   │   │   │   │   ├── default.cpython-310.pyc
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   └── modules.cpython-310.pyc
+│   │   │   │   ├── sparse_unet
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── mink_unet.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   ├── mink_unet.cpython-310.pyc
+│   │   │   │   │   │   ├── spconv_unet_v1m1_base.cpython-310.pyc
+│   │   │   │   │   │   ├── spconv_unet_v1m2_bn_momentum.cpython-310.pyc
+│   │   │   │   │   │   └── spconv_unet_v1m3_pdnorm.cpython-310.pyc
+│   │   │   │   │   ├── spconv_unet_v1m1_base.py
+│   │   │   │   │   ├── spconv_unet_v1m2_bn_momentum.py
+│   │   │   │   │   └── spconv_unet_v1m3_pdnorm.py
+│   │   │   │   ├── spvcnn
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   └── ts_spvcnn.cpython-310.pyc
+│   │   │   │   │   └── ts_spvcnn.py
+│   │   │   │   ├── stratified_transformer
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   │   ├── stratified_transformer_v1m1_origin.cpython-310.pyc
+│   │   │   │   │   │   └── stratified_transformer_v1m2_refine.cpython-310.pyc
+│   │   │   │   │   ├── stratified_transformer_v1m1_origin.py
+│   │   │   │   │   └── stratified_transformer_v1m2_refine.py
+│   │   │   │   ├── swin3d
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── mink_layers.py
+│   │   │   │   │   ├── swin3d_layers.py
+│   │   │   │   │   └── swin3d_v1m1_base.py
+│   │   │   │   └── utils
+│   │   │   │       ├── checkpoint.py
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── misc.py
+│   │   │   │       ├── __pycache__
+│   │   │   │       │   ├── checkpoint.cpython-310.pyc
+│   │   │   │       │   ├── __init__.cpython-310.pyc
+│   │   │   │       │   ├── misc.cpython-310.pyc
+│   │   │   │       │   └── structure.cpython-310.pyc
+│   │   │   │       ├── serialization
+│   │   │   │       │   ├── default.py
+│   │   │   │       │   ├── hilbert.py
+│   │   │   │       │   ├── __init__.py
+│   │   │   │       │   ├── __pycache__
+│   │   │   │       │   │   ├── default.cpython-310.pyc
+│   │   │   │       │   │   ├── hilbert.cpython-310.pyc
+│   │   │   │       │   │   ├── __init__.cpython-310.pyc
+│   │   │   │       │   │   └── z_order.cpython-310.pyc
+│   │   │   │       │   └── z_order.py
+│   │   │   │       └── structure.py
+│   │   │   ├── __pycache__
+│   │   │   │   └── __init__.cpython-310.pyc
+│   │   │   ├── scripts
+│   │   │   │   └── inference.sh
+│   │   │   ├── tools
+│   │   │   │   ├── inference_kul.py
+│   │   │   │   └── inference.py
+│   │   │   └── utils
+│   │   │       ├── cache.py
+│   │   │       ├── comm.py
+│   │   │       ├── config.py
+│   │   │       ├── env.py
+│   │   │       ├── events.py
+│   │   │       ├── __init__.py
+│   │   │       ├── logger.py
+│   │   │       ├── misc.py
+│   │   │       ├── optimizer.py
+│   │   │       ├── path.py
+│   │   │       ├── __pycache__
+│   │   │       │   ├── cache.cpython-310.pyc
+│   │   │       │   ├── comm.cpython-310.pyc
+│   │   │       │   ├── config.cpython-310.pyc
+│   │   │       │   ├── env.cpython-310.pyc
+│   │   │       │   ├── __init__.cpython-310.pyc
+│   │   │       │   ├── logger.cpython-310.pyc
+│   │   │       │   ├── misc.cpython-310.pyc
+│   │   │       │   ├── path.cpython-310.pyc
+│   │   │       │   └── registry.cpython-310.pyc
+│   │   │       ├── registry.py
+│   │   │       ├── scheduler.py
+│   │   │       ├── timer.py
+│   │   │       └── visualization.py
+│   │   ├── __pycache__
+│   │   │   └── __init__.cpython-310.pyc
+│   │   ├── README.md
+│   │   ├── scripts
+│   │   │   ├── build_image.sh
+│   │   │   ├── test.sh
+│   │   │   ├── train_kul.sh
+│   │   │   └── train.sh
+│   │   └── tools
+│   │       ├── test.py
+│   │       ├── test_s3dis_6fold.py
+│   │       └── train.py
+│   └── __pycache__
+│       └── __init__.cpython-310.pyc
+└── utils
+    ├── __init__.py
+    ├── __pycache__
+    │   ├── __init__.cpython-310.pyc
+    │   └── t1_utils.cpython-310.pyc
+    └── t1_utils.py
