@@ -25,31 +25,27 @@ pip install open3d
 pip install spconv-cu120
 pip install geomapi
 pip install laspy[lazrs,laszip]
-
+conda install -c bioconda google-sparsehash
 ```
 -PROBLEMS iwht pointops:
-    -> error: #error -- unsupported GNU version! gcc versions later than 12 are not supported! The nvcc flag '-allow-unsupported-compiler' -> solved: conda install -c conda-forge gcc=10
-     -> cannot execute 'cc1plus': execvp: No such file or directory -> export PATH="/usr/bin/g++:$PATH"
-     -> conda remove gcc gxx -> conda install gxx=10.2.1
-     -> conda install -c conda-forge gcc_linux-64=10 gxx_linux-64=10
-     -> ln -sf conda-forge gcc 10.4.0-17 /path/to/g++
-    -> gcc_path=$(command -v gcc)
-    -> cd ~
-    -> ln -sf $gcc_path ~/g++
-
+    -> error: #error -- unsupported GNU version! gcc versions later than 12 are not supported! The nvcc flag '-allow-unsupported-compiler'
+    -> install version 10: conda install -c conda-forge gcc=10 #confirm with 'which gcc' and 'gcc version'
+    -> if g++ is still looking at default, do the following
+        -> cd ~/.conda/envs/pointcept/bin # go to env directory
+        -> ln -s gcc g++ # create symbolic link for g++ to look at the new gcc
 
 
 - compile pointops
 ```bash
 # Be sure to have CUDA runtime installed and working (nvcc)
-cd 3rdparty/Pointcept/libs/pointops
+cd thirdparty/pointcept/libs/pointops
 python setup.py install
 cd ../../../..
 ```
 - compile pointgroup_ops
 ```bash
 # Be sure to have CUDA runtime installed and working (nvcc)
-cd 3rdparty/Pointcept/libs/pointgroup_ops/
+cd thirdparty/pointcept/libs/pointgroup_ops/
 python setup.py install --include_dirs=${CONDA_PREFIX}/include  
 cd ../../../..
 ```
@@ -63,14 +59,16 @@ ln -s /geomatics/gpuserver-0/mbassier/2024-04\ Benchmark\ CVPR\ scan-to-BIM/ dat
 - run inference with existing model
 ```bash
 export PYTHONPATH="/home/mbassier/code/Scan-to-BIM-CVPR-2024/thirdparty:$PYTHONPATH" # python path needs to be explicity located as submodule is otherwise not recognised
-python thirdparty/pointcept/pointcept/tools/inference_kul.py --config-file configs/kul/kul-pt-v3-base.py --options save_path=../../data/t1_data_test/result weight=../../data/t1_data_test/model/model_best.pth
+python thirdparty/pointcept/pointcept/tools/inference_kul.py --config-file /home/mbassier/code/Scan-to-BIM-CVPR-2024/thirdparty/pointcept/configs/kul/kul-pt-v3-base.py --options save_path=/home/mbassier/code/Scan-to-BIM-CVPR-2024/data/t1_data_test/result weight=/home/mbassier/code/Scan-to-BIM-CVPR-2024/data/t1_data_test/model/model_best.pth # use complete paths
 ```
 
-- run inference with existing model
-```bash
-export PYTHONPATH="/home/mbassier/code/Scan-to-BIM-CVPR-2024/thirdparty:$PYTHONPATH" # python path needs to be explicity located as submodule is otherwise not recognised
-python thirdparty/pointcept/pointcept/tools/inference_kul.py --config-file configs/kul/kul-pt-v3-base.py --options save_path=../../data/t1_data_test/result weight=../../data/t1_data_test/model/model_best.pth
-```
+- OR run inference with [script](../scripts/t1_semantic_segmentation_kul_server.ipynb)
+    - Add a dataset.py file to pointcept/datasets
+    - Add 'from .kul import KULDataset' to pointcept/datasets/__init__.py
+    - Add complete data paths to data/config.py
+
+
+
 
 ## steps to get PTv3 running on remote Linux
 
