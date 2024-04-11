@@ -3,3 +3,6 @@
 	url = https://github.com/Saiga1105/pointcept.git
 	fetchRecurseSubmodules = true
 
+[submodule "thirdparty/groundingdino"]
+	path = thirdparty/groundingdino
+	url = https://github.com/SamDeGeyter/groundingdino.git
