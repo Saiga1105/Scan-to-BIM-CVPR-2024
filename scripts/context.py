@@ -7,3 +7,5 @@ sys.path.append('../')
 
 #add thirdparty submodules
 sys.path.append('../thirdparty/pointcept')
+sys.path.append('../thirdparty/groundingdino')
+
