@@ -12,18 +12,21 @@ import cv2
 from utils import timer
 import open3d as o3d
 import copy
+from typing import Tuple
 
 @timer
-def create_top_view_point_cloud_image(las, pixel_resolution=0.02)->(np.ndarray, float, float, float ):
+def create_top_view_point_cloud_image(las: laspy.LasData, pixel_resolution: float = 0.02) -> Tuple[np.ndarray, float, float, float]:
     """
     Create a top view image of a LiDAR point cloud from a LAS file.
+    
     Args:
-        las: A laspy.LasData object containing the point cloud data.
-        pixel_resolution: The pixel resolution in meters.
-    Returns:
-        A top view image of the point cloud.
-    """
+        las (laspy.LasData): A LasData object containing the point cloud data.
+        pixel_resolution (float): The pixel resolution in meters.
 
+    Returns:
+        Tuple[np.ndarray, float, float, float]: A tuple containing the top view image of the point cloud,
+                                               and the minimum x, y coordinates and pixel resolution.
+    """
     # Get the coordinates and RGB data
     points = np.vstack((las.x, las.y)).transpose()
     colors = np.vstack((las.red, las.green, las.blue)).transpose()
@@ -41,9 +44,7 @@ def create_top_view_point_cloud_image(las, pixel_resolution=0.02)->(np.ndarray, 
 
     # Calculate the offsets for mapping points to pixels
     offset_x = min_x
-    offset_y = min_y
-    # offset_y = max_y
-    
+    offset_y = min_y  
 
     # Map the points to pixel coordinates
     scaled_points = ((points - [offset_x, offset_y]) / pixel_resolution).astype(int)
@@ -70,24 +71,31 @@ def create_top_view_point_cloud_image(las, pixel_resolution=0.02)->(np.ndarray, 
           
     return image, offset_x, offset_y, pixel_resolution
 
-def slice_point_cloud(pcd, z_min, z_max)->np.ndarray:
+def slice_point_cloud(pcd: o3d.geometry.PointCloud, z_min: float, z_max: float) -> o3d.geometry.PointCloud:
     """
-    Slice a point cloud based on the z-axis.
+    Slice a point cloud based on the z-axis range.
+
     Args:
-        pcd: A numpy array containing the point cloud data.
-        z_min: The minimum z-coordinate.
-        z_max: The maximum z-coordinate.
+        pcd (o3d.geometry.PointCloud): An Open3D PointCloud object.
+        z_min (float): The minimum z-coordinate for slicing.
+        z_max (float): The maximum z-coordinate for slicing.
+
     Returns:
-        A numpy array containing the sliced point cloud data.
+        o3d.geometry.PointCloud: A sliced Open3D PointCloud object within the specified z-axis range.
     """
-    points=np.asarray(pcd.points)
-    
-    #retain only the points that have z value between min_z and max_z
-    mask=(points[:,2]>z_min) & (points[:,2]<z_max)
-    points=points[mask]
-    colors=np.asarray(pcd.colors)[mask]
-    pcd_slice=o3d.geometry.PointCloud()
-    pcd_slice.points=o3d.utility.Vector3dVector(points)
-    pcd_slice.colors=o3d.utility.Vector3dVector(colors)
-    
-    return pcd_slice
+    # Convert Open3D PointCloud to numpy array for slicing
+    points = np.asarray(pcd.points)
+    colors = np.asarray(pcd.colors) if pcd.colors else None
+
+    # Create a mask for points within the specified z-range
+    mask = (points[:, 2] >= z_min) & (points[:, 2] <= z_max)
+    sliced_points = points[mask]
+
+    # Create a new PointCloud with sliced points and corresponding colors
+    sliced_pcd = o3d.geometry.PointCloud()
+    sliced_pcd.points = o3d.utility.Vector3dVector(sliced_points)
+    if colors is not None:
+        sliced_colors = colors[mask]
+        sliced_pcd.colors = o3d.utility.Vector3dVector(sliced_colors)
+
+    return sliced_pcd
