@@ -95,9 +95,10 @@ def create_object_nodes(objects_dict: Dict, class_dict: Dict) -> List[MeshNode]:
     #create geomapi nodes for each object
     for key,id in zip(objects_dict.keys(),computed_ids.values()):
         if objects_dict[key]['type'] == 'columns':
-            nodes.append(MeshNode(name=key, 
+            nodes.append(MeshNode(name='columns_'+str(key), 
                                 resource= objects_dict[key]['resource'],
                                 class_id=id,
+                                object_id=key,
                                 width=objects_dict[key]['width'],
                                 depth=objects_dict[key]['depth'],
                                 height=objects_dict[key]['height'],
@@ -107,9 +108,10 @@ def create_object_nodes(objects_dict: Dict, class_dict: Dict) -> List[MeshNode]:
                                 derivedFrom=objects_dict[key]['source'],
                                 color=ut.random_color()))
         elif objects_dict[key]['type'] == 'doors':
-            nodes.append(MeshNode(name=key, 
+            nodes.append(MeshNode(name='doors_'+str(key), 
                                 resource= objects_dict[key]['resource'],
                                 class_id=id,
+                                object_id=key,
                                 width=objects_dict[key]['width'],
                                 depth=objects_dict[key]['depth'],
                                 height=objects_dict[key]['height'],
@@ -119,10 +121,11 @@ def create_object_nodes(objects_dict: Dict, class_dict: Dict) -> List[MeshNode]:
                                 derivedFrom=objects_dict[key]['source'],
                                 color=ut.random_color()))
         elif objects_dict[key]['type'] == 'walls':
-            nodes.append(MeshNode(name=key, 
+            nodes.append(MeshNode(name='walls_'+str(key), 
                                 resource= objects_dict[key]['resource'],
                                 line=objects_dict[key]['line'],
                                 class_id=id,
+                                object_id=key,
                                 width=objects_dict[key]['width'],
                                 height=objects_dict[key]['height'],
                                 neighbor_wall_ids_at_start=objects_dict[key]['neighbor_wall_ids_at_start'],
