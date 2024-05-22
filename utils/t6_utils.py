@@ -26,18 +26,10 @@ def compute_base_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],t
 
         #compute base constraint. select the intersecting level that is closest to the bottom of the wall. Else, take the closest level to the minheight
         nearby_ref_levels= tl.select_nodes_with_intersecting_bounding_box(n,levelNodes)
-        # n.base_constraint= next((n for n in nearby_ref_levels if np.absolute(n.height-minheight)<threshold_level_height),levelNodes[np.argmax([(n.height-minheight) for n in levelNodes if n.height<minheight])] ) if nearby_ref_levels else levelNodes[np.argmax([(n.height-minheight) for n in levelNodes if n.height<minheight])] #this is a link!
         if nearby_ref_levels:
-            for n in nearby_ref_levels:
-                if np.absolute(n.height-minheight)<threshold_level_height:
-                    n.base_constraint=n
-                    break
-                n.base_constraint=levelNodes[np.argmin([(n.height-minheight) for n in levelNodes if n.height<minheight])] #this is a link!
-                n.base_constraint=levelNodes[0] if n.base_constraint is None else n.base_constraint
+            n.base_constraint=next((n for n in nearby_ref_levels if np.absolute(n.height-minheight)<threshold_level_height),nearby_ref_levels[np.argmin([np.abs(n.height-minheight) for n in nearby_ref_levels ])] ) 
         else:  
-            n.base_constraint=levelNodes[np.argmin([(n.height-minheight) for n in levelNodes if n.height<minheight])] #this is a link!
-            n.base_constraint=levelNodes[0] if n.base_constraint is None else n.base_constraint
-            
+            n.base_constraint=next((n for n in levelNodes if np.absolute(n.height-minheight)<threshold_level_height),levelNodes[np.argmin([np.abs(n.height-minheight) for n in levelNodes ])] ) 
             
             
         #compute base offset
@@ -51,21 +43,17 @@ def compute_top_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],th
         minheight = np.percentile(z_values, 0.1)
         maxheight = np.percentile(z_values, 99.9)
 
-        #compute base constraint. select the intersecting level that is closest to the top of the wall. Else, just take last levelNode.
+        #compute top constraint. select the intersecting level that is closest to the top of the wall. Else, just take closest levelNode.
         nearby_ref_levels= tl.select_nodes_with_intersecting_bounding_box(n,levelNodes)
         if nearby_ref_levels:
-            for n in nearby_ref_levels:
-                if np.absolute(n.height-maxheight)<threshold_level_height:
-                    n.top_constraint=n
-                    break
-                n.top_constraint=levelNodes[np.argmin([(n.height-maxheight) for n in levelNodes if n.height>maxheight])] #this is a link!
-                n.top_constraint=levelNodes[-1] if n.top_constraint is None else n.top_constraint
-        #     n.top_constraint= next((n for n in nearby_ref_levels if np.absolute(n.height-maxheight)<threshold_level_height),levelNodes[np.argmin([(n.height-maxheight) for n in levelNodes if n.height>maxheight])] )
-        # n.top_constraint= next((n for n in nearby_ref_levels if np.absolute(n.height-maxheight)<threshold_level_height),levelNodes[np.argmin([(n.height-maxheight) for n in levelNodes if n.height>maxheight])] ) if nearby_ref_levels else levelNodes[np.argmin([(n.height-maxheight) for n in levelNodes if n.height>maxheight])]  #this is a link!
-        else:
-            n.top_constraint=levelNodes[np.argmin([(n.height-maxheight) for n in levelNodes if n.height>maxheight])] #this is a link!
-            n.top_constraint=levelNodes[-1] if n.top_constraint is None else n.top_constraint
-        #compute base offset
+            n.top_constraint=next((n for n in nearby_ref_levels if np.absolute(n.height-maxheight)<threshold_level_height),nearby_ref_levels[np.argmin([np.abs(n.height-maxheight) for n in nearby_ref_levels ])] ) 
+        else:  
+            n.top_constraint=next((n for n in levelNodes if np.absolute(n.height-maxheight)<threshold_level_height),levelNodes[np.argmin([np.abs(n.height-maxheight) for n in levelNodes ])] ) 
+        
+        #check if the top constraint is the same as the base constraint, if so, take the next level
+        n.top_constraint=n.top_constraint if n.top_constraint!= n.base_constraint else next((e for e in levelNodes if e.height>n.top_constraint.height),levelNodes[-1])
+            
+        #compute top offset
         n.top_offset=maxheight-n.top_constraint.height
 
         #compute wall height
@@ -75,7 +63,7 @@ def compute_top_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],th
         n.height=n.top-n.bottom
         
         #CVPR DOESNT DO OFFSETS
-        n.height=n.top_constraint.height-n.base_constraint.height
+        n.height=n.top_constraint.height-n.base_constraint.height if n.top_constraint!=n.base_constraint else n.height
         
         print(f'name: {n.name}, top_constraint: {n.top_constraint.name}, top_offset: {n.top_offset}')
 
