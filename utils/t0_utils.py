@@ -119,11 +119,14 @@ def create_object_nodes(objects_dict: Dict, class_dict: Dict) -> List[MeshNode]:
                                 rotation=objects_dict[key]['rotation'],
                                 class_name=objects_dict[key]['type'],
                                 derivedFrom=objects_dict[key]['source'],
+                                host_id=objects_dict[key]['host_id'],
                                 color=ut.random_color()))
         elif objects_dict[key]['type'] == 'walls':
             nodes.append(MeshNode(name='walls_'+str(key), 
                                 resource= objects_dict[key]['resource'],
                                 line=objects_dict[key]['line'],
+                                end_pt=objects_dict[key]['end_pt'],
+                                start_pt=objects_dict[key]['start_pt'],
                                 class_id=id,
                                 object_id=key,
                                 width=objects_dict[key]['width'],
@@ -288,12 +291,12 @@ def process_point_cloud(pcdNode: PointCloudNode, objectNodes: List[MeshNode], di
     #create scalars for the point cloud
     object_scalar = np.full(len(pcdNode.resource.points), 0, dtype=np.uint8)
     class_scalar = np.full(len(pcdNode.resource.points), 255, dtype=np.uint8)
-    for i,n in objectNodes:
-        n.object_id=i+1
+    # for i,n in objectNodes:
+    #     n.object_id=i+1
 
     #create an identity point cloud of all the objectNodes
-    identityPcd,objectArray=gmu.create_identity_point_cloud([n.resource for n in objectNodes if n.derivedFrom==pcdNode.name],resolution=resolution)
-    classArray=np.array([int(n.class_id) for n in objectNodes if n.derivedFrom==pcdNode.name])[objectArray.astype(int)]
+    identityPcd,objectArray=gmu.create_identity_point_cloud([n.resource for n in objectNodes ],resolution=resolution)
+    classArray=np.array([int(n.class_id) for n in objectNodes])[objectArray.astype(int)]
 
     #compute nearest neighbors
     indices,distances=gmu.compute_nearest_neighbors(np.asarray(pcdNode.resource.points),np.asarray(identityPcd.points))
