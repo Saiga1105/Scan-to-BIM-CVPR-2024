@@ -101,6 +101,7 @@ def create_level_nodes(
         weights=[float(len(np.asarray(n.resource.points))) for n in nodes]
         heights= [float(n.cartesianTransform[2,3]) for n in nodes]
         weighted_height= np.average(heights, weights=weights)
+        max_height=np.max(heights)
 
         #compute plane from cornerpoints orientedbounding box
         vertices=np.array([np.hstack((referenceNode.orientedBounds[0][0:2],weighted_height)),
@@ -118,7 +119,7 @@ def create_level_nodes(
         
         #assign information to referenceNode
         referenceNode.plane=plane
-        referenceNode.height=weighted_height
+        referenceNode.height=max_height #weighted_height this is what CVPR uses
         
         levelNodes.append(referenceNode)
     
