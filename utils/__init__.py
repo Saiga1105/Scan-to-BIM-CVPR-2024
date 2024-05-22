@@ -11,6 +11,7 @@ import geomapi.utils.geometryutils as gmu
 from typing import Dict, Any, Tuple,List
 from geomapi.nodes import PointCloudNode
 import geomapi.tools as tl
+import open3d as o3d
 
 
 def timer(func):
@@ -52,7 +53,7 @@ def get_list_of_files(folder: Path | str , ext: str = None) -> list:
     return allFiles
 
 @timer
-def match_graph_with_las(file_path,class_dict,getResources=True,getNormals=False)->List[PointCloudNode]:
+def match_graph_with_las(file_path,las,pcd,class_dict,getResources=True,getNormals=False)->List[PointCloudNode]:
 
     #import graph
     f_g=Path(file_path).with_suffix('.ttl')
@@ -60,10 +61,8 @@ def match_graph_with_las(file_path,class_dict,getResources=True,getNormals=False
 
     # get the point cloud data
     if getResources:
-        print(f'processing {ut.get_filename(file_path)}...')      
-        las = laspy.read(file_path) 
-        pcd=gmu.las_to_pcd(las) 
-        pcd.estimate_normals() if getNormals else None
+          
+        pcd.estimate_normals() if getNormals or not pcd.has_normals()  else None
         
         #match pcd to nodes
         for c in class_dict['classes']:
@@ -107,3 +106,47 @@ def write_obj_with_submeshes(filename, meshes, mesh_names):
 
             # Update the vertex offset for the next mesh
             vertex_offset += len(mesh.vertices)
+
+
+
+def load_obj_and_create_meshes(file_path: str) -> Dict[str, o3d.geometry.TriangleMesh]:
+    """
+    Loads an OBJ file and creates TriangleMeshes for each object group.
+
+    Args:
+        file_path (str): Path to the OBJ file.
+
+    Returns:
+        Dict[str, o3d.geometry.TriangleMesh]: A dictionary mapping object group names to their corresponding TriangleMeshes.
+    """
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    vertices = []
+    faces = {}
+    current_object = None
+
+    for line in lines:
+        if line.startswith('v '):
+            parts = line.strip().split()
+            vertex = [float(parts[1]), float(parts[2]), float(parts[3])]
+            vertices.append(vertex)
+        elif line.startswith('f '):
+            if current_object is not None:
+                parts = line.strip().split()
+                face = [int(parts[1].split('/')[0]) - 1, int(parts[2].split('/')[0]) - 1, int(parts[3].split('/')[0]) - 1]
+                faces[current_object].append(face)
+        elif line.startswith('g '):
+            current_object = line.strip().split()[1]
+            if current_object not in faces:
+                faces[current_object] = []
+
+    meshes = {}
+    for object_name, object_faces in faces.items():
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(vertices)
+        mesh.triangles = o3d.utility.Vector3iVector(object_faces)
+        mesh.compute_vertex_normals()
+        meshes[object_name] = mesh
+    
+    return meshes
