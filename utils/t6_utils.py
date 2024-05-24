@@ -8,7 +8,7 @@ import geomapi.utils as ut
 import numpy as np
 import torch
 import cv2
-from utils import timer
+import utils as utl
 import open3d as o3d
 import copy
 from  geomapi.nodes import *
@@ -16,7 +16,7 @@ import geomapi.tools as tl
 import geomapi.tools.progresstools as pt
 from typing import Dict, Any, Tuple,List
 from sklearn.neighbors import NearestNeighbors # to compute nearest neighbors
-
+import json
 
 def compute_base_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],threshold_level_height:float)->None:
     for n in wallNodes:
@@ -52,6 +52,7 @@ def compute_top_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],th
         
         #check if the top constraint is the same as the base constraint, if so, take the next level
         n.top_constraint=n.top_constraint if n.top_constraint!= n.base_constraint else next((e for e in levelNodes if e.height>n.top_constraint.height),levelNodes[-1])
+        n.base_constraint=n.base_constraint if n.top_constraint!= n.base_constraint else levelNodes[0]
             
         #compute top offset
         n.top_offset=maxheight-n.top_constraint.height
@@ -66,8 +67,8 @@ def compute_top_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],th
         n.height=n.top_constraint.height-n.base_constraint.height if n.top_constraint!=n.base_constraint else n.height
         
         print(f'name: {n.name}, top_constraint: {n.top_constraint.name}, top_offset: {n.top_offset}')
-
-def compute_wall_orientation(wallNodes:List[MeshNode],referenceNodes:List[MeshNode],t_thickness:float=0.12,t_distance:float=0.7,t_inliers:float=0.5)->None:
+        
+def compute_wall_orientation(wallNodes:List[MeshNode],referenceNodes:List[MeshNode],t_inliers:float=0.5)->None:
     for n in wallNodes:    
         #Compute the dominant plane on the point cloud
         n.plane_model, n.inliers = n.resource.segment_plane(distance_threshold=0.03,
@@ -91,16 +92,14 @@ def compute_wall_orientation(wallNodes:List[MeshNode],referenceNodes:List[MeshNo
         
         #check if there is an opposing plane as well, with sufficient inliers
         #if not, take a look at the ceiling and floor nodes to see on which side they are, and use them to spawn the wall away from these nodes
-        outlier_pcd=n.resource.select_by_index(n.inliers,invert=True)
-        
-        
-        
+        outlier_pcd=n.resource.select_by_index(n.inliers,invert=True)        
         if np.asarray(outlier_pcd.points).shape[0]>t_inliers*len(n.inliers):
             #compute second dominant plane on the point cloud
             _, second_inliers = outlier_pcd.segment_plane(distance_threshold=0.03,
                                                     ransac_n=3,
                                                     num_iterations=1000)
             
+            #if there are insufficient points, or the second plane is smaller than the first, take the ceiling and floor nodes
             if (len(second_inliers)<t_inliers*len(n.inliers)):# or (n.orientedBoundingBox.extent[2]<=0.10):
                 
                 #create reference pcd from ceiling and floors
@@ -142,7 +141,44 @@ def compute_wall_orientation(wallNodes:List[MeshNode],referenceNodes:List[MeshNo
 
         print(f'name: {n.name}, plane: {n.plane_model}, inliers: {len(n.inliers)}/{len(np.asarray(n.resource.points))}')      
 
-def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness:float=0.12,t_distance:float=0.7)->None:
+def compute_exterior_walls(wallNodes:List[MeshNode],pcd,resolution:float=2)->None:
+
+    #compute axis aligned bounding box over all wallNodes
+    wallBox=gmu.join_geometries([n.resource for n in wallNodes]).get_axis_aligned_bounding_box()
+
+    #compute convex hull of the point cloud
+    hull, _ = pcd.compute_convex_hull()
+    hull_pcd=gmu.sample_geometry(hull,resolution)[0]
+    center=pcd.get_center()
+    points=np.asarray(hull_pcd.points)  
+      
+    #remove points that are too close to the top or bottom
+    points =points[np.where((points[:,2]<wallBox.get_max_bound()[2]-0.1) & (points[:,2]>wallBox.get_min_bound()[2]+0.1))] 
+    
+    #create rays point to the center of the bounding box
+    directions=center-points
+    directions=directions/np.linalg.norm(directions,axis=1)[:,None]
+    rays=np.hstack((points,directions))
+    rays=o3d.core.Tensor(rays,dtype=o3d.core.Dtype.Float32)
+    
+    #compute collision geometries
+    wall_boxes=[o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(n.resource.get_oriented_bounding_box()) for n in wallNodes]
+
+    #create raycasting scene    
+    scene = o3d.t.geometry.RaycastingScene()
+    for g in wall_boxes:
+        reference=o3d.t.geometry.TriangleMesh.from_legacy(g)
+        scene.add_triangles(reference)
+    
+    #compute raycasting
+    ans = scene.cast_rays(rays)
+    for n in wallNodes:
+        n.exterior=False
+    for id in np.unique(ans['geometry_ids'].numpy()):
+        wallNodes[id].exterior=True
+    
+
+def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness_interior:float=0.12,t_thickness_exterior:float=0.3)->None:
     for n in wallNodes:
         distance=0
 
@@ -151,6 +187,7 @@ def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness:float=0.12,t_dis
         normals=np.asarray(outlier_pcd.normals)
         idx=np.where(np.absolute(np.einsum('i,ji->j',n.normal,normals))>0.9)[0]
         outlier_pcd=outlier_pcd.select_by_index(idx)
+        
         #remove all the points closer than 0.08m
         distances=np.asarray(outlier_pcd.compute_point_cloud_distance(n.resource.select_by_index(n.inliers)))
         idx=np.where(distances>0.08)[0]
@@ -165,6 +202,7 @@ def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness:float=0.12,t_dis
             #get average of the outliers
             second_plane_center=np.mean(np.asarray(outlier_pcd.select_by_index(second_inliers).points),axis=0)
             second_plane_center[2]=n.base_constraint.height#CVPR RULES + n.base_offset
+            
             #get average of the inliers
             first_plane_center=np.mean(np.asarray(n.resource.select_by_index(n.inliers).points),axis=0)
             first_plane_center[2]=n.base_constraint.height #CVPR RULES+ n.base_offset              
@@ -208,16 +246,18 @@ def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness:float=0.12,t_dis
         #     distance = t_thickness
 
         #set distance to t_thickness if distance is smaller than t_thickness
-        n.wallThickness=distance if distance >= t_thickness else t_thickness
+        if n.exterior==False:
+            n.wallThickness=distance if distance >= t_thickness_interior  else t_thickness_interior
+        else:
+            n.wallThickness=distance if distance >= t_thickness_exterior else t_thickness_exterior
 
-        print(f'name: {n.name}, BB_extent: {n.orientedBoundingBox.extent}, wallThickness: {n.wallThickness}')
+        print(f'name: {n.name}, BB_extent: {n.orientedBoundingBox.extent}, exterior wall {n.exterior}, wallThickness: {n.wallThickness}')
 
 def compute_wall_axis(wallNodes:List[MeshNode])->None:
     for n in wallNodes:     
     
         #offset the center of the plane with half the wall thickness in the direction of the normal of the plane  
         wallCenter=n.faceCenter-n.normal*n.wallThickness/2 
-
         wallCenter[2]=n.base_constraint.height #CVPR n.bottom
 
         #project axis aligned bounding points on the plane
@@ -241,8 +281,7 @@ def compute_wall_axis(wallNodes:List[MeshNode])->None:
 
         #create the axis
         n.axis=o3d.geometry.LineSet(points=o3d.utility.Vector3dVector(boundaryPoints),lines=o3d.utility.Vector2iVector([[0,1]])).paint_uniform_color([0,0,1])
-        # n.startPoint=n.boundaryPoints[0]
-        # n.endPoint=n.boundaryPoints[1]
+
         # Calculate the length
         n.wallLength = np.linalg.norm(boundaryPoints[0] - boundaryPoints[1])
 
@@ -264,10 +303,10 @@ def compute_wall_geometry(wallNodes:List[MeshNode])->None:
         n.wallBox=o3d.geometry.LineSet.create_from_oriented_bounding_box(box)
         n.wallBox.paint_uniform_color([0,0,1])
 
-        print(f'name: {n.name}, wall: {n.wall}')
+        # print(f'name: {n.name}, wall: {n.wall}')
 
 
-def walls_to_json(wallNodes: list[MeshNode], file_name: str) -> Dict:
+def walls_to_json(wallNodes: list[MeshNode]) -> Dict:
     """
     Converts wall nodes data to a Dictionary ready for saving or further processing.
 
@@ -281,44 +320,53 @@ def walls_to_json(wallNodes: list[MeshNode], file_name: str) -> Dict:
     Raises:
         ValueError: If the input data is not in the expected format or missing required data.
     """
-    
-    # Prepare JSON data structure
-    json_data = {
-        "filename": f"{ut.get_filename(file_name)}_walls.obj",
-        "objects": []
-    }
-    
+    objects=[]
     # Fill JSON with node data
     for n in wallNodes:
-        if not hasattr(n, 'base_constraint') or not hasattr(n, 'base_offset') or not hasattr(n, 'top_constraint') or not hasattr(n, 'top_offset') or not hasattr(n, 'height') or not hasattr(n, 'wallThickness') or not hasattr(n, 'wallLength') or not hasattr(n, 'normal') or not hasattr(n, 'axis') :
-            raise ValueError("Node is missing required attributes (base_constraint, base_offset, top_constraint,top_offset,height,wallThickness,wallLength,normal, boundaryPoints ).")
-        
-        try:
-            #fill json
-            obj = {
-                    "name": n.name,
-                    "id": n.object_id,
-                    "class_name": n.class_name,
-                    "class_id": n.class_id,
-                    "base_constraint":n.base_constraint.name,
-                    "base_offset":n.base_offset,
-                    "top_constraint":n.top_constraint.name,
-                    "top_offset":n.top_offset,
-                    "height": n.height,
-                    "width": n.wallThickness,
-                    "wallLength": n.wallLength,
-                    "normal": list(n.normal),
-                    "start_pt": list(np.asarray(n.axis.points)[0]),
-                    "end_pt": list(np.asarray(n.axis.points)[1]),
-                    "neighbor_wall_ids_at_start": n.neighbor_wall_ids_at_start,
-                    "neighbor_wall_ids_at_end": n.neighbor_wall_ids_at_end,
-                    }
-            json_data["objects"].append(obj)
-        except Exception as e:
-            raise ValueError(f"Error processing node {n.name}: {str(e)}")
-    
+        objects.append({
+            # "name": n.name,
+            "id":int(n.object_id),
+            "start_pt": list(np.asarray(n.axis.points)[0]),
+            "end_pt": list(np.asarray(n.axis.points)[1]),
+            "width": n.wallThickness,
+            "height": n.height,                           
+            "neighbor_wall_ids_at_start": n.neighbor_wall_ids_at_start,
+            "neighbor_wall_ids_at_end": n.neighbor_wall_ids_at_end,
+            })
+      
     # Convert the Python dictionary to a JSON string
-    return json_data
+    return objects
+
+
+def walls_to_json_gt(wallNodes: list[MeshNode]) -> list:
+    """
+    Converts wall nodes data to a Dictionary ready for saving or further processing.
+
+    Parameters:
+        wallNodes (list): A list of nodes, each representing a wall with attributes like box, name, and height.
+
+    Returns:
+        str: A Dictionary representing the wall data.
+    
+    Raises:
+        ValueError: If the input data is not in the expected format or missing required data.
+    """
+    objects=[]
+    # Fill JSON with node data
+    for n in wallNodes:
+        objects.append({
+            # "name": n.name,
+            "id":int(n.corresponding_id),
+            "start_pt": list(np.asarray(n.axis.points)[0]),
+            "end_pt": list(np.asarray(n.axis.points)[1]),
+            "width": n.width,
+            "height": n.height,                           
+            "neighbor_wall_ids_at_start": n.corresponding_neighbor_wall_ids_at_start,
+            "neighbor_wall_ids_at_end": n.corresponding_neighbor_wall_ids_at_end,
+            })
+      
+    # Convert the Python dictionary to a JSON string
+    return objects
 
 
 def compute_nearest_neighbors(query_points: np.ndarray, reference_points: np.ndarray, maxDist: float = 5, n: int = 1) -> Tuple[np.ndarray, np.ndarray]:
@@ -637,3 +685,116 @@ def find_line_intersection_or_extension(line, ref_lines,t_extend:float=0) -> np.
         else:
             intersection_points.append(None)
     return intersection_points[0] if len(intersection_points)==1 else intersection_points
+
+
+def compute_training_results(input_folder_gt,wallNodesBIM,f_pcd,output_folder,reform_name):
+
+    gt_files=utl.get_list_of_files(input_folder_gt,'.ttl')
+    gt_files_obj=utl.get_list_of_files(input_folder_gt,'.obj')
+    
+    f_gt=next((f for f in gt_files if '_'.join(ut.get_filename(f).split('_')[:4])=='_'.join(ut.get_filename(f_pcd).split('_')[:4])),None)
+    f_gt_obj=next((f for f in gt_files_obj if '_'.join(ut.get_filename(f).split('_')[:4])=='_'.join(ut.get_filename(f_pcd).split('_')[:4])),None)
+    #import objects
+    mesh_dict=utl.load_obj_and_create_meshes(f_gt_obj)
+    
+    #import graph
+    pcdNodes_gt=tl.graph_path_to_nodes(graphPath=str(f_gt))
+    pcdNodes_gt_walls=[n for n in pcdNodes_gt if n.class_id==2]
+
+    #add objects to the nodes
+    for n in pcdNodes_gt_walls:
+        mesh=next((mesh for name, mesh in mesh_dict.items() if name == n.name),None)
+        n.resource=mesh
+        n.lineset=o3d.geometry.LineSet.create_from_triangle_mesh(mesh)
+        n.lineset.paint_uniform_color(ut.literal_to_array(n.color))
+        #compute the normal from start to end point
+        n.resource.compute_triangle_normals()
+        n.normal =np.asarray( n.resource.triangle_normals)[11]
+    print(f'{len(pcdNodes_gt_walls)} pcdNodes_gt_walls detected!') # there are only 144 walls in the training data, yet 161 are found here
+    
+    #match the walls with the ground truth
+    for n in wallNodesBIM:
+        
+        #create lineset
+        n.lineset=o3d.geometry.LineSet.create_from_triangle_mesh(n.resource)
+        n.lineset.paint_uniform_color(ut.literal_to_array(n.color))
+                
+        #find the corresponding ground truth wall 
+        pose=n.cartesianTransform[:3,3]
+        distances=[np.linalg.norm(pose-n.cartesianTransform[:3,3]) for n in pcdNodes_gt_walls]
+        idx=np.argmin(distances)
+        n_gt=pcdNodes_gt_walls[idx]
+        n_gt.color=n.color
+        n.corresponding_gt=n_gt.name
+        n.corresponding_id=n_gt.object_id
+        n.corresponding_normal=n_gt.normal
+        n.corresponding_neighbor_wall_ids_at_start_gt=ut.literal_to_list(n_gt.neighbor_wall_ids_at_start)
+        n.corresponding_neighbor_wall_ids_at_start_gt=[int(x) for x in n.corresponding_neighbor_wall_ids_at_start_gt if x!=None] if n.corresponding_neighbor_wall_ids_at_start_gt is not None else [0]
+        n.corresponding_neighbor_wall_ids_at_end_gt=ut.literal_to_list(n_gt.neighbor_wall_ids_at_end)
+        n.corresponding_neighbor_wall_ids_at_end_gt=[int(x) for x in n.corresponding_neighbor_wall_ids_at_end_gt if x!=None] if n.corresponding_neighbor_wall_ids_at_end_gt is not None else [0]
+
+        #create a line from the n.resource.get_center() along the n.normal in red and along the n_gt.normal in green
+        # line=o3d.geometry.LineSet()
+        # line.points=o3d.utility.Vector3dVector([n.resource.get_center(),n.resource.get_center()+n.normal])
+        # line.lines=o3d.utility.Vector2iVector([[0,1]])
+        # line.colors=o3d.utility.Vector3dVector([[1,0,0]])
+        # n.lineset+=line
+        # line=o3d.geometry.LineSet()
+        # line.points=o3d.utility.Vector3dVector([n.resource.get_center(),n.resource.get_center()+n_gt.normal])
+        # line.lines=o3d.utility.Vector2iVector([[0,1]])
+        # line.colors=o3d.utility.Vector3dVector([[0,1,0]])
+        # n.lineset+=line
+        
+        
+        #make comparison
+        n.startpoint_diff=np.round(np.min(np.array([np.linalg.norm(ut.literal_to_array(n_gt.start_pt)[:2]-n.start_pt[:2]),np.linalg.norm(ut.literal_to_array(n_gt.end_pt)[:2]-n.start_pt[:2])])),2)
+        n.endpoint_diff=np.round(np.min(np.array([np.linalg.norm(ut.literal_to_array(n_gt.end_pt)[:2]-n.end_pt[:2]),np.linalg.norm(ut.literal_to_array(n_gt.start_pt)[:2]-n.end_pt[:2])])),2)
+        n.height_diff=np.round(n_gt.height-n.height,2) #CVPR height is arbitrary and not based on geometries
+        n.width_diff=np.round(n_gt.width-n.width,2)
+        n.normal_diff=np.round(1-np.abs(np.dot(n_gt.normal,n.normal)),2)
+        print(f'wall {n.get_name()} with length {n.wallLength}, with a startpoint_diff of {n.startpoint_diff}, endpoint_diff of {n.endpoint_diff}, height_diff of {n.height_diff}, wallThickness_diff of {n.width_diff} (gt width is {np.round(n_gt.width,2)}), normal_diff of {n.normal_diff}')
+
+    for n in wallNodesBIM:
+        
+        #find corresponding neighbors
+        n.corresponding_neighbor_wall_ids_at_start=[]
+        n.corresponding_neighbor_wall_ids_at_end=[]
+        for id in n.neighbor_wall_ids_at_start:
+            neighbor=next((m for m in wallNodesBIM if m.object_id==id),None)
+            node=next((m for m in pcdNodes_gt_walls if m.name==neighbor.corresponding_gt),None)
+            n.corresponding_neighbor_wall_ids_at_start.append(int(node.object_id))
+        # n.corresponding_neighbor_wall_ids_at_start.append(0) #temporary
+        for id in n.neighbor_wall_ids_at_end:
+            neighbor=next((m for m in wallNodesBIM if m.object_id==id),None)
+            node=next((m for m in pcdNodes_gt_walls if m.name==neighbor.corresponding_gt),None)
+            n.corresponding_neighbor_wall_ids_at_end.append(int(node.object_id))
+        # n.corresponding_neighbor_wall_ids_at_end.append(0) #temporary
+        #compute overlap between n.corresponding_neighbor_wall_ids_at_start_gt and n.corresponding_neighbor_wall_ids_at_start
+        n.overlap_start=len(set(n.corresponding_neighbor_wall_ids_at_start_gt).intersection(n.corresponding_neighbor_wall_ids_at_start))/len(n.corresponding_neighbor_wall_ids_at_start_gt)
+        n.overlap_end=len(set(n.corresponding_neighbor_wall_ids_at_end_gt).intersection(n.corresponding_neighbor_wall_ids_at_end))/len(n.corresponding_neighbor_wall_ids_at_end_gt)
+        # print(f'wall {n.get_name()} with overlap_start of {n.corresponding_neighbor_wall_ids_at_start} and gt {n.corresponding_neighbor_wall_ids_at_start_gt}')
+    
+    
+    json_data=walls_to_json_gt(wallNodesBIM)
+    with open(os.path.join(output_folder,reform_name+'.json'), 'w') as file:
+        json.dump(json_data, file, indent=4)
+    print("JSON data written to file:", os.path.join(output_folder,reform_name+'.json'))
+    
+        
+    #general comparison    
+    print(f'len of elements width_def <0.03: {len([e for e in wallNodesBIM if np.abs(e.width_diff)<=0.03])}/{len(wallNodesBIM)}')
+    print(f'len of elements height_diff<0.1: {len([e for e in wallNodesBIM if np.abs(e.height_diff)<=0.1])}/{len(wallNodesBIM)}')
+    print(f'len of elements normal_diff<0.05: {len([e for e in wallNodesBIM if np.abs(e.normal_diff)<=0.05])}/{len(wallNodesBIM)}')    
+    print(f'len of elements axis location<0.1: {len([e for e in wallNodesBIM if (np.average(np.abs([e.startpoint_diff,e.endpoint_diff]))<=0.1)])}/{len(wallNodesBIM)}')  
+    print(f'len of computed elements with t_thickness: {len([e for e in wallNodesBIM if e.width ==0.127])}/{len(wallNodesBIM)} vs gt elements {len([e for e in pcdNodes_gt_walls if e.width == 0.127])}/{len(pcdNodes_gt_walls)}')
+    print(f'len of elements with overlap_start>0.5: {len([e for e in wallNodesBIM if e.overlap_start>=0.5])}/{len(wallNodesBIM)}')
+    print(f'len of elements with overlap_start>0.5: {len([e for e in wallNodesBIM if e.overlap_end>=0.5])}/{len(wallNodesBIM)}')
+    
+    
+    #general comparison  
+    print('in percentages')  
+    print(f'len of elements width_def <0.03: {np.round(100*len([e for e in wallNodesBIM if np.abs(e.width_diff)<=0.03])/len(wallNodesBIM),1)}%')
+    print(f'len of elements height_diff<0.1: {np.round(100*len([e for e in wallNodesBIM if np.abs(e.height_diff)<=0.1])/len(wallNodesBIM),1)}%')
+    print(f'len of elements normal_diff<0.05: {np.round(100*len([e for e in wallNodesBIM if np.abs(e.normal_diff)<=0.05])/len(wallNodesBIM),1)}%')    
+    print(f'len of elements axis location<0.1: {np.round(100*len([e for e in wallNodesBIM if (np.average(np.abs([e.startpoint_diff,e.endpoint_diff]))<=0.1)])/len(wallNodesBIM),1)}%')  
+    print(f'len of elements with overlap_start>0.5: {np.round(100*np.average((len([e for e in wallNodesBIM if e.overlap_start>=0.5]),len([e for e in wallNodesBIM if e.overlap_end>=0.5])))/len(wallNodesBIM),1)}%')
