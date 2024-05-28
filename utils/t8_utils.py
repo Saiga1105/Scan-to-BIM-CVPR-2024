@@ -188,7 +188,7 @@ def load_model_hf(repo_id, filename, ckpt_config_filename, device='cpu'):
     _ = model.eval()
     return model   
 
-def extract_box_with_margin(image, box, margin = 10):
+def extract_box_with_margin(image, box, margin = 1):
     # Extract center and size from the detection array
     width = int(np.asarray(box)[2]*image.shape[1])
     height =   int(np.asarray(box)[3]*image.shape[0])
@@ -221,18 +221,18 @@ def compute_center(point1, point2):
               (point1[2] + point2[2]) / 2]
     return center
 
-def is_door(probability, width, height, reference_level, prob_weight=0.15, width_weight=0.15, height_weight=0.3, ref_level_weight=0.3):
+def is_door(probability, width, height, reference_level, prob_weight=0.15, width_weight=0.15, height_weight=0.3, ref_level_weight=0.3, name = None):
     # Ensure parameters are within valid ranges
     if height < 1.5 or height > 2.5:
         return 0  # Invalid height for a door
 
     # Width score calculation with two ideal ranges and additional penalty
-    if 0.6 <= width <= 1.0 or 1.2 <= width <= 2.0:
+    if 0.6 <= width <= 1.5:#1.0 or 1.2 <= width <= 2.0:
         width_score = 1
     elif width < 0.6:
-        width_score = width / 0.6 - 0.2
-    elif width < 1.2:
-        width_score = max(0, (1.2 - width) / (1.2 - 1.0)) - 0.2
+        width_score = width / 0.6 - 0.3
+    # elif width < 1.2:
+    #     width_score = max(0, (1.2 - width) / (1.2 - 1.0)) - 0.2
     elif width > 2.0:
         width_score = max(0, 2.0 / width) - 0.5
     else:
@@ -242,9 +242,9 @@ def is_door(probability, width, height, reference_level, prob_weight=0.15, width
     if 2 <= height <= 2.4:
         height_score = 1
     elif height < 2.0:
-        height_score = max(0, (height - 1.5) / 0.5) - 0.2
+        height_score = max(0, (height - 1.5) / 0.5) - 0.5
     else:
-        height_score = max(0, (2.5 - height) / 0.1) - 0.2
+        height_score = max(0, (2.5 - height) / 0.1) - 0.5
 
     # Reference level score calculation with additional penalty
     if reference_level <= 0.05:
@@ -275,7 +275,8 @@ def is_door(probability, width, height, reference_level, prob_weight=0.15, width
     # Return 0 if any score is 0
     if width_score <= 0 or height_score <= 0 or reference_level_score <= 0:
         combined_score = 0
-        
+    # if not name == None:
+    #     print("Image: %s" %(name))    
     # print("Probability: %s - SCORE: %s" %(probability, weighted_prob))
     # print("Width: %s - SCORE: %s" %(width, weighted_width))
     # print("height: %s - SCORE: %s" %(height, weighted_height))
@@ -285,7 +286,6 @@ def is_door(probability, width, height, reference_level, prob_weight=0.15, width
     # print("")
 
     return combined_score
-
 def box_to_corners(box):
     u_center, v_center, u_size, v_size = box
     half_u_size = u_size / 2
@@ -321,6 +321,7 @@ def compute_iou(box1, box2):
     iou = inter_area / union_area if union_area > 0 else 0
     
     return iou
+
 def compute_parameter_similarity(params1, params2):
     # Example: use Euclidean distance and convert it to a similarity score
     distance = np.linalg.norm(np.array(params1) - np.array(params2))
@@ -342,35 +343,33 @@ def compute_doorness_similarity(score1, score2):
     return similarity
 
 
-def find_best_matches(boxes1, boxes2, params1, params2, iou_weight=0.33, param_weight=0.33, doorness_weight=0.33):
+def find_best_matches(boxes1, boxes2, params1, params2, iou_weight=0.33, param_weight=0.33, doorness_weight=0.33, size_diff_threshold = 0.2):
     matches = []
     used_boxes1 = set()  # Track used boxes from boxes1
     used_boxes2 = set()  # Track used boxes from boxes2
-    
-    # for box in boxes2:
-    #     box = np.asarray(box)
-    #     box[0] = 1 - box[0]
 
     for i, box1 in enumerate(boxes1):
         max_score = -1
         best_match = -1
+        area1 = compute_area(box1)
 
         for j, box2 in enumerate(boxes2):
-            
-            
             if j in used_boxes2:
                 continue
             
             iou = compute_iou(box1, box2)
-            if iou > 0.2:
+            area2 = compute_area(box2)
+                        
+            if iou > 0.2: #or max(area1, area2) / min(area1, area2) < 0.9:
                 used_boxes2.add(j)
+            # else:
             param_similarity = compute_parameter_similarity(params1[i][0:2], params2[j][0:2])
             doorness_similarity = compute_doorness_similarity(params1[i][4:5], params2[j][4:5])
             
             # Combine IoU, parameter similarity, and doorness score into a single score
             combined_score = iou_weight * iou + param_weight * param_similarity + doorness_weight * doorness_similarity
             
-            if combined_score > max_score and combined_score > 0.6:
+            if combined_score > max_score and combined_score > 0.5:
                 max_score = combined_score
                 best_match = j
             
@@ -437,18 +436,54 @@ def convert_to_center_size(box):
     v_size = y2 - y1
     return (u_center, v_center, u_size, v_size)
 
-def merge_boxes(box1, box2):
-    box1 = box_to_corners(box1)
-    box2 = box_to_corners(box2)
+# def merge_boxes(box1, box2):
+#     box1 = box_to_corners(box1)
+#     box2 = box_to_corners(box2)
     
-    x1 = min(box1[0], box2[0])
-    y1 = min(box1[1], box2[1])
-    x2 = max(box1[2], box2[2])
-    y2 = max(box1[3], box2[3])
+#     x1 = min(box1[0], box2[0])
+#     y1 = min(box1[1], box2[1])
+#     x2 = max(box1[2], box2[2])
+#     y2 = max(box1[3], box2[3])
     
-    return convert_to_center_size((x1, y1, x2, y2))
+#     return convert_to_center_size((x1, y1, x2, y2))
 
-def find_and_merge_high_iou_boxes(boxes, threshold=0.6):
+def compute_area(box):
+    """Compute the area of a box."""
+    box = box_to_corners(box)
+    # Assuming box is in the format [x1, y1, x2, y2]
+    width = abs(box[2] - box[0])
+    height = abs(box[3] - box[1])
+    return width * height
+
+# def find_and_merge_high_iou_boxes(boxes, threshold=0.6):
+#     merged = True
+#     while merged:
+#         merged = False
+#         num_boxes = len(boxes)
+#         for i in range(num_boxes):
+#             if merged:
+#                 break
+#             for j in range(i + 1, num_boxes):
+#                 if compute_iou(boxes[i], boxes[j]) > threshold:
+#                     boxes[i] = merge_boxes(boxes[i], boxes[j])
+#                     del boxes[j]
+#                     merged = True
+#                     break
+#     return boxes
+
+def find_and_merge_high_iou_boxes(boxes, threshold=0.6, size_diff_threshold=0.2, info = None):
+    """
+    Find and merge boxes with high IoU, taking size difference into account.
+    
+    Args:
+        boxes (list): List of boxes in the format [x1, y1, x2, y2].
+        threshold (float): IoU threshold for merging.
+        size_diff_threshold (float): Maximum allowable ratio of box sizes for merging.
+
+    Returns:
+        list: List of merged boxes.
+    """
+        
     merged = True
     while merged:
         merged = False
@@ -457,11 +492,14 @@ def find_and_merge_high_iou_boxes(boxes, threshold=0.6):
             if merged:
                 break
             for j in range(i + 1, num_boxes):
-                if compute_iou(boxes[i], boxes[j]) > threshold:
-                    boxes[i] = merge_boxes(boxes[i], boxes[j])
-                    del boxes[j]
-                    merged = True
-                    break
+                iou = compute_iou(boxes[i], boxes[j])
+                if iou > threshold:
+                    score_i = info[i][-1]
+                    score_j = info[j][-1]
+                    if score_j > score_i:
+                        del boxes[i]
+                    elif score_i > score_j:
+                        del boxes[j]
     return boxes
 
 def calculate_percentage_black_pixels(image):
@@ -486,7 +524,7 @@ def calculate_percentage_black_pixels(image):
     total_pixels = grayscale_image.shape[0] * grayscale_image.shape[1]
 
     # Calculate percentage of black pixels
-    percentage_black_pixels = (black_pixel_count / total_pixels) * 100
+    percentage_black_pixels = (black_pixel_count / total_pixels)
 
     return float(1-percentage_black_pixels)
 
@@ -589,7 +627,8 @@ def match_graph_with_las(file_path,class_dict, nodes, getResources=True,getNorma
                 indices=np.where(object_labels==j)[0]
                 object_pcd=class_pcd.select_by_index(indices)
                 node=next((x for x in nodes if x.object_id == j), None)
-                node.pcd=object_pcd if node is not None else None
+                if not node == None:
+                    node.pcd=object_pcd if node is not None else None
             
     return nodes
 
@@ -620,3 +659,19 @@ def get_angle_with_x_axis(start_point, end_point):
     theta_degrees = np.degrees(theta_radians)
     
     return theta_degrees
+
+def compute_door_parameters(detectionbox, ortho, image_resolution = 0.01):
+    opening_width = round(int(np.asarray(detectionbox)[0][2]*ortho.shape[1])* image_resolution, 2)
+    # print("Opening Width:", opening_width)
+    
+    opening_height = round(int(np.asarray(detectionbox)[0][3]*ortho.shape[0]) * image_resolution, 2)
+    
+    detection_center_u = int(np.asarray(detectionbox)[0][0]*ortho.shape[1]) * image_resolution
+    detection_center_v = int(np.asarray(detectionbox)[0][1]*ortho.shape[0]) * image_resolution
+    reference_level = round((ortho.shape[0]*image_resolution) - (detection_center_v + opening_height/2), 2)
+    
+    image_resource = extract_box_with_margin(ortho, detectionbox[0])
+    image_resource = image_resource[...,::-1] # BGR to RGB
+    bl_px = calculate_percentage_black_pixels(image_resource)
+    
+    return opening_width, opening_height, detection_center_u, detection_center_v, reference_level, bl_px
