@@ -162,7 +162,7 @@ def compute_exterior_walls(wallNodes:List[MeshNode],pcd,resolution:float=2)->Non
     rays=o3d.core.Tensor(rays,dtype=o3d.core.Dtype.Float32)
     
     #compute collision geometries
-    wall_boxes=[o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(n.resource.get_oriented_bounding_box()) for n in wallNodes]
+    wall_boxes=[o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(gmu.expand_box(n.resource.get_oriented_bounding_box(),1,1,0)) for n in wallNodes]
 
     #create raycasting scene    
     scene = o3d.t.geometry.RaycastingScene()
@@ -175,7 +175,8 @@ def compute_exterior_walls(wallNodes:List[MeshNode],pcd,resolution:float=2)->Non
     for n in wallNodes:
         n.exterior=False
     for id in np.unique(ans['geometry_ids'].numpy()):
-        wallNodes[id].exterior=True
+        if id!=4294967295: #uint 16 max value -> invalid id
+            wallNodes[id].exterior=True
     
 
 def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness_interior:float=0.12,t_thickness_exterior:float=0.3)->None:
@@ -192,7 +193,7 @@ def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness_interior:float=0
         distances=np.asarray(outlier_pcd.compute_point_cloud_distance(n.resource.select_by_index(n.inliers)))
         idx=np.where(distances>0.08)[0]
         outlier_pcd=outlier_pcd.select_by_index(idx)
-        
+        second_inliers=[]
         if np.asarray(outlier_pcd.points).shape[0]>0.1*len(n.inliers) or np.asarray(outlier_pcd.points).shape[0]>500:
             #compute second dominant plane on the point cloud
             _, second_inliers = outlier_pcd.segment_plane(distance_threshold=0.03,
@@ -246,10 +247,14 @@ def compute_wall_thickness(wallNodes:List[MeshNode],t_thickness_interior:float=0
         #     distance = t_thickness
 
         #set distance to t_thickness if distance is smaller than t_thickness
-        if n.exterior==False:
-            n.wallThickness=distance if distance >= t_thickness_interior  else t_thickness_interior
-        else:
+        if len(second_inliers) > 0.5 * len(n.inliers) and distance>0.08:
+            n.wallThickness=distance
+        
+        elif n.exterior:            
             n.wallThickness=distance if distance >= t_thickness_exterior else t_thickness_exterior
+            
+        else:
+            n.wallThickness=distance if distance >= t_thickness_interior  else t_thickness_interior
 
         print(f'name: {n.name}, BB_extent: {n.orientedBoundingBox.extent}, exterior wall {n.exterior}, wallThickness: {n.wallThickness}')
 
