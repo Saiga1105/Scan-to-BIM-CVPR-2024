@@ -612,7 +612,7 @@ def match_graph_with_las(file_path,class_dict, nodes, getResources=True,getNorma
 
     # get the point cloud data
     if getResources:
-        print(f'processing {ut.get_filename(file_path)}...')      
+        # print(f'processing {ut.get_filename(file_path)}...')      
         las = laspy.read(file_path) 
         pcd=gmu.las_to_pcd(las) 
         pcd.estimate_normals() if getNormals else None
