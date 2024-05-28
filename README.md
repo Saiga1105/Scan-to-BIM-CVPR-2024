@@ -1,11 +1,31 @@
 # Scan-to-BIM-CVPR-2024
-This is the KUL and FBK repo for the [4th International Scan-to-BIM competition](https://cv4aec.github.io/). We split the process into two steps, a **Detection** (task 0-4) and a **Reconstruction**(task 5-10) step. In total, 11 tasks are defined. Each step is explained below. 
+<div style="text-align: justify;">
+This is the KUL and FBK repo for the [4th International Scan-to-BIM competition](https://cv4aec.github.io/) to reconstruct wall, column and door elements from point cloud data in public buildings. We split the process into three steps, a <strong>Preprocessing</strong> step (task 0), a <strong>Detection</strong> step (tasks 1-4) and a <strong>Reconstruction</strong> (tasks 5-9) step. In total, 10 tasks are defined. Each step is explained below.
+</div>
 
-![Alt text](/docs/assets/IMG_Stan_00_General.png "1")
+![Preprocessing result showing submeshes for each wall, column, and door element.](docs/assets/t6_walls2.PNG)
 
- 
+<p align="center"><i>Figure 1: Preprocessing result showing submeshes for each wall, column, and door element.</i></p>
 
-## Instance Segmentation
+## Preprocessing
+<div style="text-align: justify;">
+The preprocessing includes subsampling the point cloud to 0.01m and parsing the training data jsons to triangle mesh objects. The result is an .obj with submeshes for each wall, column and door element (see Figure 1). Additionally, we segment the point clouds according to these elements to form the ground truth for the instance segmentation training (Figure 2). We also generate RDF graphs with metric metadata of each point cluster and link them to the BIM Objects so they can be tracked throughout the reconstruction process. Take a look at our [GEOMAPI](https://ku-leuven-geomatics.github.io/geomapi/) toolbox to read more about how this is done.
+</div>
+
+<div style="display: flex; justify-content: space-around;">
+    <div style="flex: 1; text-align: center;">
+        <img src="docs/assets/35_Lab_02_F1_small1_t6_2.png" alt="35 Lab 02 F1 Small1 T6 2" style="width: 100%; height: 100%; object-fit: cover;">
+        <p>Figure 2: Segmented Point Cloud</p>
+    </div>
+    <div style="flex: 1; text-align: center;">
+        <img src="docs/assets/rdf1.png" alt="RDF1" style="width: 100%; height: 100%; object-fit: cover;">
+        <p>Figure 3: RDF graph with Metadata properties</p>
+    </div>
+</div>
+
+
+
+## Detection
 In the first step, we compute the instance segmentation of the primary (walls, ceilings, floors, columns) and secondary structure classes ( doors, windows). Two scalar field are assigned to the unstructured point clouds. First, a **class label** is computed for every point of the in total 6 classes (0.Floors, 1.Ceilings, 2. Walls, 3.Columns, 4.Doors, 255.Unassigned). Second, an **object label** is assigned to every point and a json is computed with the 3D information of the detected objects. 
 ![Alt text](/docs/assets/detection.PNG "detection")
 
