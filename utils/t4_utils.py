@@ -12,13 +12,9 @@ from utils import timer
 import open3d as o3d
 import copy
 from  geomapi.nodes import *
-<<<<<<< HEAD
 from typing import Tuple, List, Optional,Dict,Any
 import copy
 
-=======
- 
->>>>>>> 8d7ef90ab82e7bd9023dc0b0c2a27bc6e73fb7ce
 @timer
 def fit_planes(point_cloud, distance_threshold=0.05, ransac_n=3, num_iterations=1000, min_inliers=1000,eps=0.5,min_cluster_points=200):
     """
@@ -431,8 +427,7 @@ def split_point_cloud_by_dbscan(class_pcd,eps=0.2,min_cluster_points=100):
                 #select by index
                 inlier_pcd= class_pcd.select_by_index(indices)
                 pcds.append(inlier_pcd)
-<<<<<<< HEAD
-    return pcds if len(pcds)>0 else [point_cloud]
+    return pcds if len(pcds)>0 else [pcds]
   
   
 def create_floor_and_ceiling_nodes(
@@ -908,7 +903,3 @@ def create_door_nodes(
             rest_pcd+=p
     
     return nodes,rest_pcd  
-=======
-    return pcds if len(pcds)>0 else [class_pcd]
-  
->>>>>>> 8d7ef90ab82e7bd9023dc0b0c2a27bc6e73fb7ce
