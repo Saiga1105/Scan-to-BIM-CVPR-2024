@@ -8,9 +8,10 @@ import geomapi.utils as ut
 import numpy as np
 import torch
 import cv2
-import utils as utl
+from utils import timer
 import open3d as o3d
 import copy
+<<<<<<< HEAD
 from  geomapi.nodes import *
 import geomapi.tools as tl
 import geomapi.tools.progresstools as pt
@@ -803,3 +804,6 @@ def compute_training_results(input_folder_gt,wallNodesBIM,f_pcd,output_folder,re
     print(f'len of elements normal_diff<0.05: {np.round(100*len([e for e in wallNodesBIM if np.abs(e.normal_diff)<=0.05])/len(wallNodesBIM),1)}%')    
     print(f'len of elements axis location<0.1: {np.round(100*len([e for e in wallNodesBIM if (np.average(np.abs([e.startpoint_diff,e.endpoint_diff]))<=0.1)])/len(wallNodesBIM),1)}%')  
     print(f'len of elements with overlap_start>0.5: {np.round(100*np.average((len([e for e in wallNodesBIM if e.overlap_start>=0.5]),len([e for e in wallNodesBIM if e.overlap_end>=0.5])))/len(wallNodesBIM),1)}%')
+=======
+from  geomapi.nodes import *
+>>>>>>> 8d7ef90ab82e7bd9023dc0b0c2a27bc6e73fb7ce

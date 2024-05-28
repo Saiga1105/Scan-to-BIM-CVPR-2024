@@ -1,43 +1,42 @@
-'''The provided code involves multiple functions that perform operations on point clouds using Open3D, such as fitting planes, splitting point clouds into clusters, and creating various geometric nodes.'''
 
 import time
 import os
 import laspy
+import geomapi
 import geomapi.utils.geometryutils as gmu
 import geomapi.utils as ut
 import numpy as np
+import torch
+import cv2
 from utils import timer
 import open3d as o3d
+import copy
 from  geomapi.nodes import *
+<<<<<<< HEAD
 from typing import Tuple, List, Optional,Dict,Any
 import copy
 
+=======
+ 
+>>>>>>> 8d7ef90ab82e7bd9023dc0b0c2a27bc6e73fb7ce
 @timer
-def fit_planes(point_cloud: o3d.geometry.PointCloud, 
-               distance_threshold: float = 0.05, 
-               ransac_n: int = 3, 
-               num_iterations: int = 1000, 
-               min_inliers: int = 1000, 
-               eps: float = 0.5, 
-               min_cluster_points: int = 200) -> Tuple[List[np.ndarray], List[o3d.geometry.PointCloud]]:
+def fit_planes(point_cloud, distance_threshold=0.05, ransac_n=3, num_iterations=1000, min_inliers=1000,eps=0.5,min_cluster_points=200):
     """
-    Segments a point cloud into planes using the RANSAC algorithm, iterating until no significant planes can be found.
-    
+    Segments a point cloud into planes using the RANSAC algorithm, continuing until no more planes with sufficient
+    inliers can be found.
+
     Parameters:
-        point_cloud (o3d.geometry.PointCloud): The point cloud to segment.
-        distance_threshold (float): Max distance from the plane for inliers.
-        ransac_n (int): Number of points to estimate the plane model in each iteration.
-        num_iterations (int): Maximum number of iterations to attempt RANSAC.
-        min_inliers (int): Minimum number of inliers required to consider a plane.
-        eps (float): DBSCAN epsilon parameter for clustering inliers.
-        min_cluster_points (int): Minimum number of points to form a cluster.
-        
+        point_cloud (o3d.geometry.PointCloud): The point cloud from which to segment planes.
+        distance_threshold (float): The maximum distance a point can be from the plane to be considered an inlier.
+        ransac_n (int): The number of initial points to consider for a plane model.
+        num_iterations (int): The number of iterations the RANSAC algorithm should run.
+        min_inliers (int): The minimum number of inliers required for a plane to be considered valid.
+
     Returns:
-        Tuple[List[np.ndarray], List[o3d.geometry.PointCloud]]: Tuple containing a list of plane coefficients and 
-                                                                corresponding segmented point clouds.
-        
+        list(planes,pcds): A list of plane models where each plane model is defined by its coefficients.
+
     Raises:
-        ValueError: If the point cloud is empty or methods are not applicable.
+        ValueError: If the input point cloud does not have the required methods.
     """
     #copy the point cloud
     pcd = point_cloud
@@ -71,44 +70,24 @@ def fit_planes(point_cloud: o3d.geometry.PointCloud,
             
     return planes,pcds
 
-@timer
-def split_point_cloud_in_planar_clusters(
-    point_cloud: o3d.geometry.PointCloud, 
-    distance_threshold: float = 0.05, 
-    sample_resolution: Optional[float] = None, 
-    ransac_n: int = 3, 
-    num_iterations: int = 1000, 
-    min_inliers: int = 1000, 
-    eps: float = 0.5, 
-    min_cluster_points: int = 200,
-    threshold_clustering_distance: float = 0.7,
-    threshold_clustering_normals: float = 0.9
-) -> Tuple[List[o3d.geometry.PointCloud], List[np.ndarray]]:
-    """
-    Segments a point cloud into clusters based on planar segmentation and merges clusters based on distance and normal similarity.
-    
-    Parameters:
-        point_cloud (o3d.geometry.PointCloud): Input point cloud.
-        distance_threshold (float): Threshold distance for considering inliers in RANSAC.
-        sample_resolution (Optional[float]): Resolution for downsampling the point cloud.
-        ransac_n (int): Number of random points to estimate the plane model.
-        num_iterations (int): Number of iterations for RANSAC.
-        min_inliers (int): Minimum inliers for a cluster to be valid.
-        eps (float): Epsilon value for DBSCAN clustering.
-        min_cluster_points (int): Minimum points to form a cluster in DBSCAN.
-        threshold_clustering_distance (float): Distance threshold for merging clusters.
-        threshold_clustering_normals (float): Normal similarity threshold for merging clusters.
+def split_point_cloud_in_planar_clusters(point_cloud, 
+                                    distance_threshold=0.05, 
+                                    sample_resolution=None, 
+                                    ransac_n=3, 
+                                    num_iterations=1000, 
+                                    min_inliers=1000, 
+                                    eps=0.5, 
+                                    min_cluster_points=200,
+                                    threshold_clustering_distance=0.7,
+                                    threshold_clustering_normals=0.9):
 
-    Returns:
-        Tuple[List[o3d.geometry.PointCloud], List[np.ndarray]]: A tuple containing clusters of point clouds and their respective plane models.
-    """
     clustered_pcds=[]
     clustered_planes=[]
     
     #sample the point cloud (optional)
     point_cloud=gmu.sample_geometry(point_cloud, resolution=sample_resolution)[0] if sample_resolution is not None else point_cloud
 
-    #fit planes to create a set of potential clusters
+    #fit planes
     planes,pcds=fit_planes(point_cloud,  
                             distance_threshold=distance_threshold,                                   
                                 min_inliers=min_inliers,
@@ -116,8 +95,8 @@ def split_point_cloud_in_planar_clusters(
                                 num_iterations=num_iterations,
                                 ransac_n=ransac_n,
                                 eps=eps)
+    # print(f"Found {len(planes)} planes in {len(pcds)} point clouds")
     
-    #next, we will cluster the planes based on distance and normal similarity (starting from the largest plane)
     #also sort the planes                                                    
     sorted_list = sorted(zip(pcds,planes), key=lambda x: len(np.asarray(x[0].points)),reverse=True)
     
@@ -441,32 +420,18 @@ def create_plane_mesh(normal, points):
     plane_mesh.compute_vertex_normals()
     return plane_mesh
 
-def split_point_cloud_by_dbscan(
-    point_cloud: o3d.geometry.PointCloud,
-    eps: float = 0.2,
-    min_cluster_points: int = 100
-) -> List[o3d.geometry.PointCloud]:
-    """
-    Splits a point cloud into clusters using the DBSCAN algorithm.
-    
-    Parameters:
-        point_cloud (o3d.geometry.PointCloud): The point cloud to cluster.
-        eps (float): The maximum distance between two points to be considered as in the same neighborhood.
-        min_cluster_points (int): The minimum number of points required to form a dense region.
-
-    Returns:
-        List[o3d.geometry.PointCloud]: A list of point cloud clusters.
-    """    
+def split_point_cloud_by_dbscan(class_pcd,eps=0.2,min_cluster_points=100):
     pcds=[]
-    labels = np.array(point_cloud.cluster_dbscan(eps=eps, min_points=min_cluster_points))
+    labels = np.array(class_pcd.cluster_dbscan(eps=eps, min_points=min_cluster_points))
     for u in np.unique(labels):
         if u != -1:      
             #get indices 
             indices=np.where(labels==u)[0]                 
             if indices.shape[0]>min_cluster_points:
                 #select by index
-                inlier_pcd= point_cloud.select_by_index(indices)
+                inlier_pcd= class_pcd.select_by_index(indices)
                 pcds.append(inlier_pcd)
+<<<<<<< HEAD
     return pcds if len(pcds)>0 else [point_cloud]
   
   
@@ -943,3 +908,7 @@ def create_door_nodes(
             rest_pcd+=p
     
     return nodes,rest_pcd  
+=======
+    return pcds if len(pcds)>0 else [class_pcd]
+  
+>>>>>>> 8d7ef90ab82e7bd9023dc0b0c2a27bc6e73fb7ce

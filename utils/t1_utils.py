@@ -1,4 +1,3 @@
-'''The provided code processes point cloud data and saves it in a format that can be used by PyTorch dataloader in PTV3 network. The code reads LAS/LAZ files, converts them to point cloud data, and remaps the classes to 0,1,2,3,4,5 based on the values in the configuration file. It then divides the point cloud into chunks based on the specified size or parts and saves the processed data as .pth files. The `preprocess_point_clouds_to_pth` function takes the file path, output folder, configuration file, size, and parts as input parameters and performs the preprocessing steps. The `handle_process` function processes the point cloud data and saves it in .pth format. The `revert_class_mapping` function reverts the class mapping from indices to labels based on the configuration file. The code also includes a timer decorator to measure the execution time of the functions.'''
 
 import time
 import os
@@ -8,23 +7,74 @@ import geomapi.utils.geometryutils as gmu
 import geomapi.utils as ut
 import numpy as np
 import torch
-from typing import Any, Dict, List, Optional
 
 from utils import timer
 import open3d as o3d
-from deprecated import deprecated
- 
+
 @timer
-def preprocess_point_clouds_to_pth(file_path: str, output_folder: str, cfg: Dict, size: Optional[List[int]] = None, parts: Optional[List[int]] = None) -> None:
-    """
-    Preprocesses point cloud data for use in a PyTorch DataLoader.
+def handle_process(file_name, output_folder,cfg,batch_size=20000000) -> None:
+    print(f'processing {file_name} ...')
+
+    coords = []
+    scene_id = os.path.basename(file_name)
+    name, _ = os.path.splitext(scene_id)    
+
+    # Read LAS/LAZ
+    las = laspy.read(file_name)
+    
+    #conver to pcd if no normals are present
+    pcd = gmu.las_to_pcd(las)
+    pcd.estimate_normals()
+    pcd.orient_normals_to_align_with_direction()
+    
+    coords = np.stack([las.x, las.y, las.z], axis=1)
+    colors = np.stack([las.red, las.green, las.blue], axis=1).astype(np.uint8)
+    normals = np.asarray(pcd.normals)
+    # verticality = np.nan_to_num(las.verticality)
+    # max = np.max(verticality)
+    # verticality = verticality / (max / 2.) - 1.
+    
+    # Remap las['classes'] to 0,1,2,3,4,5 based on values in cfg['data']['labels']
+    class_mapping = {label: i for i, label in enumerate(cfg['data']['labels'])}
+    remapped_classes = np.array([class_mapping[label] for label in las['classes']])
+    
+    #per 10 million points, save the data
+    num_points = coords.shape[0]
+    if num_points >= batch_size:
+        num_chunks = num_points // batch_size
+        for i in range(num_chunks):
+            start_idx = i * batch_size
+            end_idx = (i + 1) * batch_size
+            chunk_coords = coords[start_idx:end_idx]
+            chunk_colors = colors[start_idx:end_idx]
+            chunk_normals = normals[start_idx:end_idx]
+            chunk_semantic_gt = remapped_classes[start_idx:end_idx]
+            chunk_save_dict = dict(coord=chunk_coords, color=chunk_colors, normal=chunk_normals, scene_id=scene_id, semantic_gt=chunk_semantic_gt)
+            torch.save(chunk_save_dict, os.path.join(output_folder, f"{name}_{i}.pth"))
+        remaining_coords = coords[num_chunks * batch_size:]
+        remaining_colors = colors[num_chunks * batch_size:]
+        remaining_normals = normals[num_chunks * batch_size:]
+        remaining_semantic_gt = remapped_classes[num_chunks * batch_size:]
+        remaining_save_dict = dict(coord=remaining_coords, color=remaining_colors, normal=remaining_normals, scene_id=scene_id, semantic_gt=remaining_semantic_gt)
+        torch.save(remaining_save_dict, os.path.join(output_folder, f"{name}_{num_chunks}.pth"))
+    else:
+        save_dict = dict(coord=coords, color=colors, normal=normals, scene_id=scene_id, semantic_gt=remapped_classes)
+        torch.save(save_dict, os.path.join(output_folder, f"{name}.pth"))    
+    
+    # save_dict = dict(coord=coords, color=colors, normal=normals, scene_id=scene_id, semantic_gt=las['classes'].astype(int))    
+
+    #torch.save(save_dict, os.path.join(output_folder, f"{name}.pth"))
+    
+@timer
+def preprocess_point_clouds_to_pth(f:str, output_folder:str,cfg,size=None,parts=None):
+    """Preprocess point clouds to pth files used by PyTorch dataloader in PTV3 network.
 
     Args:
-        file_path (str): File path of the point cloud data.
-        output_folder (str): Directory to save the preprocessed files.
-        cfg (Dict[str, Any]): Configuration for processing.
-        size (Optional[List[int]]): Dimensions for chunking the point cloud.
-        parts (Optional[List[int]]): How to divide the point cloud into parts.
+        f (str): file path to the point cloud
+        output_folder (str): output directory
+        cfg (custom): training/testing config file
+        size (list, optional): size of parts to partition the point cloudsin X,Y,Z. Defaults to [20,20,100].
+        parts (list, optional): number of parts to partition the point cloud in X,Y,Z. Defaults to [7,7,1].
     """
     #get file_name
     file_name=ut.get_filename(f)    
@@ -41,7 +91,8 @@ def preprocess_point_clouds_to_pth(file_path: str, output_folder: str, cfg: Dict
     if getattr(las,'classes',None) is not None:
         class_mapping = {label: i for i, label in enumerate(cfg['data']['labels'])}
         remapped_classes = np.array([class_mapping[label] for label in las['classes']])
-                
+        
+        
     #divide the point cloud into chunks per part [7,7,1] or size e.g. [10m,10m,100m]
     if size or parts:
         box=o3d.geometry.AxisAlignedBoundingBox(min_bound=np.array([las.x.min(),las.y.min(),las.z.min()]),
@@ -80,18 +131,7 @@ def preprocess_point_clouds_to_pth(file_path: str, output_folder: str, cfg: Dict
         torch.save(chunk_dict, os.path.join(output_folder, f"{chunk_name}.pth"))
         print(f'saved {file_name}')
         
-
-def revert_class_mapping(cfg: Dict, indices: List[int]) -> List[str]:
-    """
-    Reverts class indices back to their original string labels based on a configuration mapping.
-
-    Args:
-        cfg (Dict[str, Any]): Configuration dictionary containing class labels.
-        indices (List[int]): List of indices to revert back to labels.
-
-    Returns:
-        List[str]: List of class labels corresponding to the input indices.
-    """
+def revert_class_mapping(cfg, indices):
     # Create the original mapping from labels to indices
     class_mapping = {label: i for i, label in enumerate(cfg['data']['labels'])}
     

@@ -1,4 +1,3 @@
-'''This module contains utility functions for the t0 pipeline. The functions are used to parse JSON files, create Open3D objects, and process point clouds.'''
 
 import time
 import json
@@ -9,17 +8,30 @@ import geomapi
 from geomapi.nodes import *
 from geomapi import utils as ut
 from geomapi.utils import geometryutils as gmu
-from typing import Dict, Any, Tuple,List
 
 
-def parse_json(file_path: str, objects_dict: Dict) -> Dict:
+def t1_time_funtion(func, *args):
+    """Measures how long the functions takes to run and returns the result 
+
+    Args:
+        func (function): The funtion to measure, write without ()
+        *args (Tuple) : The arguments for the funtion, pass as a tuple with a * in front to pass the arguments seperatly
+
+    Returns:
+        object: The result of the function
     """
-    Parses a JSON file to extract object properties and store in a dictionary.
-    """
+
+    start = time.time()
+    result = func(*args)
+    end = time.time()
+    print("Completed function `" + func.__name__ + "()` in", np.round(end - start,3), "seconds")
+    return result 
+
+def parse_json(file,objects_dict):
     try:
-        with open(file_path, 'r') as f:
+        with open(file, 'r') as f:
             json_data = f.read()
-            print("Data read from file:", file_path.split('/')[-1].split('.')[0])  # Check the data from the file.
+            print("Data read from file:", file.split('/')[-1].split('.')[0])  # Check the data from the file.
             data = json.loads(json_data)
     except data:
         print("File not found.")
@@ -29,8 +41,8 @@ def parse_json(file_path: str, objects_dict: Dict) -> Dict:
         print("An error occurred:", e)
     
     for item in data:
-        item_class = file_path.split('/')[-1].split('.')[0].split('_')[-1]    
-        source='_'.join(file_path.split('/')[-1].split('.')[0].split('_')[0:-1])
+        item_class = file.split('/')[-1].split('.')[0].split('_')[-1]    
+        source='_'.join(file.split('/')[-1].split('.')[0].split('_')[0:-1])
         # Collect details based on type
         if item_class == 'columns':
             objects_dict[item['id']] = {
@@ -76,79 +88,55 @@ def parse_json(file_path: str, objects_dict: Dict) -> Dict:
 
     return objects_dict
 
-def create_object_nodes(objects_dict: Dict, class_dict: Dict) -> List[MeshNode]:
-    """
-    Creates and returns a list of MeshNode objects from object definitions and class mappings.
+def create_object_nodes(objects_dict,class_dict):
+        
+        nodes=[]
+        #match objects to classes
+        id_dict = {item['name']: item['id'] for item in class_dict['classes']}
+        computed_ids = {key: id_dict.get(value['type'], class_dict['default']) for key, value in objects_dict.items()}
 
-    Parameters:
-        objects_dict (Dict[str, Any]): Dictionary containing object specifications.
-        class_dict (Dict[str, Any]): Dictionary containing class definitions and a default class ID.
+        #create geomapi nodes for each object
+        for key,id in zip(objects_dict.keys(),computed_ids.values()):
+            if objects_dict[key]['type'] == 'columns':
+                nodes.append(MeshNode(name=key, 
+                                    resource= objects_dict[key]['resource'],
+                                    class_id=id,
+                                    width=objects_dict[key]['width'],
+                                    depth=objects_dict[key]['depth'],
+                                    height=objects_dict[key]['height'],
+                                    loc=objects_dict[key]['loc'],
+                                    rotation=objects_dict[key]['rotation'],                                    
+                                    class_name=objects_dict[key]['type'],
+                                    derivedFrom=objects_dict[key]['source'],
+                                    color=ut.random_color()))
+            elif objects_dict[key]['type'] == 'doors':
+                nodes.append(MeshNode(name=key, 
+                                    resource= objects_dict[key]['resource'],
+                                    class_id=id,
+                                    width=objects_dict[key]['width'],
+                                    depth=objects_dict[key]['depth'],
+                                    height=objects_dict[key]['height'],
+                                    loc=objects_dict[key]['loc'],
+                                    rotation=objects_dict[key]['rotation'],
+                                    class_name=objects_dict[key]['type'],
+                                    derivedFrom=objects_dict[key]['source'],
+                                    color=ut.random_color()))
+            elif objects_dict[key]['type'] == 'walls':
+                nodes.append(MeshNode(name=key, 
+                                    resource= objects_dict[key]['resource'],
+                                    line=objects_dict[key]['line'],
+                                    class_id=id,
+                                    width=objects_dict[key]['width'],
+                                    height=objects_dict[key]['height'],
+                                    neighbor_wall_ids_at_start=objects_dict[key]['neighbor_wall_ids_at_start'],
+                                    neighbor_wall_ids_at_end=objects_dict[key]['neighbor_wall_ids_at_end'],
+                                    class_name=objects_dict[key]['type'],
+                                    derivedFrom=objects_dict[key]['source'],
+                                    color=ut.random_color()))
+        return nodes
 
-    Returns:
-        List[MeshNode]: List of MeshNode instances created based on the objects and class mappings.
-    """        
-    nodes=[]
-    #match objects to classes
-    id_dict = {item['name']: item['id'] for item in class_dict['classes']}
-    computed_ids = {key: id_dict.get(value['type'], class_dict['default']) for key, value in objects_dict.items()}
-
-    #create geomapi nodes for each object
-    for key,id in zip(objects_dict.keys(),computed_ids.values()):
-        if objects_dict[key]['type'] == 'columns':
-            nodes.append(MeshNode(name='columns_'+str(key), 
-                                resource= objects_dict[key]['resource'],
-                                class_id=id,
-                                object_id=key,
-                                width=objects_dict[key]['width'],
-                                depth=objects_dict[key]['depth'],
-                                height=objects_dict[key]['height'],
-                                loc=objects_dict[key]['loc'],
-                                rotation=objects_dict[key]['rotation'],                                    
-                                class_name=objects_dict[key]['type'],
-                                derivedFrom=objects_dict[key]['source'],
-                                color=ut.random_color()))
-        elif objects_dict[key]['type'] == 'doors':
-            nodes.append(MeshNode(name='doors_'+str(key), 
-                                resource= objects_dict[key]['resource'],
-                                class_id=id,
-                                object_id=key,
-                                width=objects_dict[key]['width'],
-                                depth=objects_dict[key]['depth'],
-                                height=objects_dict[key]['height'],
-                                loc=objects_dict[key]['loc'],
-                                rotation=objects_dict[key]['rotation'],
-                                class_name=objects_dict[key]['type'],
-                                derivedFrom=objects_dict[key]['source'],
-                                host_id=objects_dict[key]['host_id'],
-                                color=ut.random_color()))
-        elif objects_dict[key]['type'] == 'walls':
-            nodes.append(MeshNode(name='walls_'+str(key), 
-                                resource= objects_dict[key]['resource'],
-                                line=objects_dict[key]['line'],
-                                end_pt=objects_dict[key]['end_pt'],
-                                start_pt=objects_dict[key]['start_pt'],
-                                class_id=id,
-                                object_id=key,
-                                width=objects_dict[key]['width'],
-                                height=objects_dict[key]['height'],
-                                neighbor_wall_ids_at_start=objects_dict[key]['neighbor_wall_ids_at_start'],
-                                neighbor_wall_ids_at_end=objects_dict[key]['neighbor_wall_ids_at_end'],
-                                class_name=objects_dict[key]['type'],
-                                derivedFrom=objects_dict[key]['source'],
-                                color=ut.random_color()))
-    return nodes
-
-
-def create_column(object_data: Dict) -> o3d.geometry.TriangleMesh:
-    """
-    Creates a 3D column mesh based on given specifications.
-
-    Parameters:
-        object_data (Dict[str, Any]): Dictionary containing dimensions and location for the column.
-
-    Returns:
-        o3d.geometry.TriangleMesh: 3D mesh of the column.
-    """    
+def create_column(object_data)->o3d.geometry.TriangleMesh:
+    
     width=object_data['width']
     depth=object_data['depth']
     height=object_data['height']
@@ -168,16 +156,8 @@ def create_column(object_data: Dict) -> o3d.geometry.TriangleMesh:
     
     return column
 
-def create_door(object_data: Dict) -> o3d.geometry.TriangleMesh:
-    """
-    Creates a 3D door mesh based on given specifications.
-
-    Parameters:
-        object_data (Dict[str, Any]): Dictionary containing dimensions and location for the door.
-
-    Returns:
-        o3d.geometry.TriangleMesh: 3D mesh of the door.
-    """    
+def create_door(object_data)->o3d.geometry.TriangleMesh:
+    
     width=object_data['width']
     depth=object_data['depth']
     height=object_data['height']
@@ -197,16 +177,18 @@ def create_door(object_data: Dict) -> o3d.geometry.TriangleMesh:
 
     return door
 
-def create_wall(object_data: Dict) -> Tuple[o3d.geometry.LineSet, o3d.geometry.TriangleMesh]:
+def create_wall(object_data):
     """
-    Creates a 3D wall represented by a line and a mesh from provided specifications.
+    Creates a LineSet object in Open3D from two 3D points.
 
     Parameters:
-        object_data (Dict[str, Any]): Dictionary containing the start and end points, width, and height of the wall.
+        object_data (dict): A dictionary containing 'start_pt',  'end_pt', both of which are
+                            lists or tuples of x, y, z coordinates of the points. Also contains 'width' and 'height' of the wall.
 
     Returns:
-        Tuple[o3d.geometry.LineSet, o3d.geometry.TriangleMesh]: LineSet and mesh representing the wall.
-    """   
+        o3d.geometry.LineSet,o3d.geometry.TriangleMesh: LineSet object representing the line between start_pt and end_pt, and the oriented bounding box representing the wall.
+    """
+   
     start_pt=object_data['start_pt']
     end_pt=object_data['end_pt']
     width=object_data['width']
@@ -228,7 +210,6 @@ def create_wall(object_data: Dict) -> Tuple[o3d.geometry.LineSet, o3d.geometry.T
 
     # Compute normal from cross product with z-axis
     normal = np.cross(vector1, np.array([0, 0, 1]))
-    
     # Normalize the normal vector
     normal /= np.linalg.norm(normal)
     
@@ -243,17 +224,19 @@ def create_wall(object_data: Dict) -> Tuple[o3d.geometry.LineSet, o3d.geometry.T
     # Create a mesh from the point list
     box=pcd.get_oriented_bounding_box()
     mesh=o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(box)
+    # wallBox=o3d.geometry.LineSet.create_from_oriented_bounding_box(box)
+
 
     return line_set, mesh
 
-def write_obj_with_submeshes(filename: str, meshes: List[o3d.geometry.TriangleMesh], mesh_names: List[str]):
+def write_obj_with_submeshes(filename, meshes, mesh_names):
     """
-    Writes multiple Open3D TriangleMesh objects to a single OBJ file with named submeshes.
+    Write multiple Open3D TriangleMesh objects to a single OBJ file with submeshes.
 
     Parameters:
-        filename (str): Path to the output file.
-        meshes (List[o3d.geometry.TriangleMesh]): List of meshes to write.
-        mesh_names (List[str]): List of names for each submesh.
+    - filename: str, the name of the output OBJ file.
+    - meshes: list of open3d.geometry.TriangleMesh, the meshes to write.
+    - mesh_names: list of str, the names of the submeshes.
     """
     if len(meshes) != len(mesh_names):
         raise ValueError("meshes and mesh_names must have the same length")
@@ -275,28 +258,18 @@ def write_obj_with_submeshes(filename: str, meshes: List[o3d.geometry.TriangleMe
             # Update the vertex offset for the next mesh
             vertex_offset += len(mesh.vertices)
             
-def process_point_cloud(pcdNode: PointCloudNode, objectNodes: List[MeshNode], distance_threshold: float = 0.1, resolution: float = 0.03) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Process a point cloud to compute object and class scalars based on the proximity of the points to provided nodes.
-
-    Parameters:
-        pcdNode (MeshNode): The node containing the main point cloud.
-        objectNodes (List[MeshNode]): List of nodes derived from the main point cloud.
-        distance_threshold (float): Distance threshold to consider when assigning objects and class scalars.
-        resolution (float): The resolution at which to sample the point cloud for identity.
-
-    Returns:
-        Tuple[np.ndarray, np.ndarray]: Tuple containing arrays of class and object scalars.
-    """    
+def process_point_cloud(pcdNode,objectNodes,distance_threshold:0.1,resolution:0.03):
+    
     #create scalars for the point cloud
     object_scalar = np.full(len(pcdNode.resource.points), 0, dtype=np.uint8)
     class_scalar = np.full(len(pcdNode.resource.points), 255, dtype=np.uint8)
-    # for i,n in objectNodes:
-    #     n.object_id=i+1
+    for i,n in objectNodes:
+        n.object_id=i+1
 
     #create an identity point cloud of all the objectNodes
-    identityPcd,objectArray=gmu.create_identity_point_cloud([n.resource for n in objectNodes ],resolution=resolution)
-    classArray=np.array([int(n.class_id) for n in objectNodes])[objectArray.astype(int)]
+    identityPcd,objectArray=gmu.create_identity_point_cloud([n.resource for n in objectNodes if n.derivedFrom==pcdNode.name],resolution=resolution)
+    classArray=np.array([int(n.class_id) for n in objectNodes if n.derivedFrom==pcdNode.name])[objectArray.astype(int)]
+    # print(len(classArray),len(objectArray))
 
     #compute nearest neighbors
     indices,distances=gmu.compute_nearest_neighbors(np.asarray(pcdNode.resource.points),np.asarray(identityPcd.points))
@@ -306,5 +279,9 @@ def process_point_cloud(pcdNode: PointCloudNode, objectNodes: List[MeshNode], di
     threshold_indices = np.where(distances <= distance_threshold)[0]
     object_scalar[threshold_indices] = objectArray[indices[threshold_indices]].astype(int)
     class_scalar[threshold_indices] = classArray[indices[threshold_indices]]
-        
+    
+    #remap objectArray
+    # names=np.array([int(n.name) for n in objectNodes])
+    # object_scalar=names[object_scalar]
+    
     return class_scalar,object_scalar
