@@ -221,7 +221,7 @@ def compute_center(point1, point2):
               (point1[2] + point2[2]) / 2]
     return center
 
-def is_door(probability, width, height, reference_level, prob_weight=0.15, width_weight=0.15, height_weight=0.3, ref_level_weight=0.3, name = None):
+def is_door(probability, width, height, reference_level, prob_weight=0.15, width_weight=0.15, height_weight=0.3, ref_level_weight=0.3):
     # Ensure parameters are within valid ranges
     if height < 1.5 or height > 2.5:
         return 0  # Invalid height for a door
@@ -275,8 +275,7 @@ def is_door(probability, width, height, reference_level, prob_weight=0.15, width
     # Return 0 if any score is 0
     if width_score <= 0 or height_score <= 0 or reference_level_score <= 0:
         combined_score = 0
-    # if not name == None:
-    #     print("Image: %s" %(name))    
+
     # print("Probability: %s - SCORE: %s" %(probability, weighted_prob))
     # print("Width: %s - SCORE: %s" %(width, weighted_width))
     # print("height: %s - SCORE: %s" %(height, weighted_height))
@@ -286,6 +285,7 @@ def is_door(probability, width, height, reference_level, prob_weight=0.15, width
     # print("")
 
     return combined_score
+
 def box_to_corners(box):
     u_center, v_center, u_size, v_size = box
     half_u_size = u_size / 2
@@ -436,16 +436,6 @@ def convert_to_center_size(box):
     v_size = y2 - y1
     return (u_center, v_center, u_size, v_size)
 
-# def merge_boxes(box1, box2):
-#     box1 = box_to_corners(box1)
-#     box2 = box_to_corners(box2)
-    
-#     x1 = min(box1[0], box2[0])
-#     y1 = min(box1[1], box2[1])
-#     x2 = max(box1[2], box2[2])
-#     y2 = max(box1[3], box2[3])
-    
-#     return convert_to_center_size((x1, y1, x2, y2))
 
 def compute_area(box):
     """Compute the area of a box."""
@@ -455,21 +445,6 @@ def compute_area(box):
     height = abs(box[3] - box[1])
     return width * height
 
-# def find_and_merge_high_iou_boxes(boxes, threshold=0.6):
-#     merged = True
-#     while merged:
-#         merged = False
-#         num_boxes = len(boxes)
-#         for i in range(num_boxes):
-#             if merged:
-#                 break
-#             for j in range(i + 1, num_boxes):
-#                 if compute_iou(boxes[i], boxes[j]) > threshold:
-#                     boxes[i] = merge_boxes(boxes[i], boxes[j])
-#                     del boxes[j]
-#                     merged = True
-#                     break
-#     return boxes
 
 def find_and_merge_high_iou_boxes(boxes, threshold=0.6, size_diff_threshold=0.2, info = None):
     """
@@ -488,18 +463,19 @@ def find_and_merge_high_iou_boxes(boxes, threshold=0.6, size_diff_threshold=0.2,
     while merged:
         merged = False
         num_boxes = len(boxes)
-        for i in range(num_boxes):
-            if merged:
-                break
-            for j in range(i + 1, num_boxes):
-                iou = compute_iou(boxes[i], boxes[j])
-                if iou > threshold:
-                    score_i = info[i][-1]
-                    score_j = info[j][-1]
-                    if score_j > score_i:
-                        del boxes[i]
-                    elif score_i > score_j:
-                        del boxes[j]
+        if num_boxes > 1:
+            for i in range(num_boxes):
+                if merged:
+                    break
+                for j in range(i + 1, num_boxes):
+                    iou = compute_iou(boxes[i], boxes[j])
+                    if iou > threshold:
+                        score_i = info[i][-1]
+                        score_j = info[j][-1]
+                        if score_j > score_i:
+                            del boxes[i]
+                        elif score_i > score_j:
+                            del boxes[j]
     return boxes
 
 def calculate_percentage_black_pixels(image):
@@ -608,8 +584,6 @@ def max_2d_distance(points):
     return max_dist
 
 def match_graph_with_las(file_path,class_dict, nodes, getResources=True,getNormals=False)->List[PointCloudNode]:
-
-
     # get the point cloud data
     if getResources:
         # print(f'processing {ut.get_filename(file_path)}...')      
