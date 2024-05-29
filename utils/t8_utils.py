@@ -221,22 +221,24 @@ def compute_center(point1, point2):
               (point1[2] + point2[2]) / 2]
     return center
 
-def is_door(probability, width, height, reference_level, prob_weight=0.15, width_weight=0.15, height_weight=0.3, ref_level_weight=0.3):
+def is_door(probability, width, height, reference_level, prob_weight=0.15, width_weight=0.15, height_weight=0.3, ref_level_weight=0.3, print_overview = False):
     # Ensure parameters are within valid ranges
     if height < 1.5 or height > 2.5:
         return 0  # Invalid height for a door
 
     # Width score calculation with two ideal ranges and additional penalty
-    if 0.6 <= width <= 1.5:#1.0 or 1.2 <= width <= 2.0:
+    if 0.6 <= width <= 1.2:#1.0 or 1.2 <= width <= 2.0:
         width_score = 1
     elif width < 0.6:
         width_score = width / 0.6 - 0.3
     # elif width < 1.2:
     #     width_score = max(0, (1.2 - width) / (1.2 - 1.0)) - 0.2
-    elif width > 2.0:
+    elif 1.2 < width < 2:
         width_score = max(0, 2.0 / width) - 0.5
+    elif width > 2:
+        width_score = 0
     else:
-        width_score = 0 - 0.2  # Should not reach here
+        width_score = 0 - 0.5  # Should not reach here
 
     # height score calculation with ideal range of 2m to 2.4m and additional penalty
     if 2 <= height <= 2.4:
@@ -275,14 +277,15 @@ def is_door(probability, width, height, reference_level, prob_weight=0.15, width
     # Return 0 if any score is 0
     if width_score <= 0 or height_score <= 0 or reference_level_score <= 0:
         combined_score = 0
-
-    # print("Probability: %s - SCORE: %s" %(probability, weighted_prob))
-    # print("Width: %s - SCORE: %s" %(width, weighted_width))
-    # print("height: %s - SCORE: %s" %(height, weighted_height))
-    # print("Reference Level: %s - SCORE: %s" %(reference_level, weighted_ref_level))
-    # print("==========================================================================")
-    # print("Total SCORE: %s" %(combined_score))
-    # print("")
+        
+    if print_overview:
+        print("Probability: %s - SCORE: %s" %(probability, weighted_prob))
+        print("Width: %s - SCORE: %s" %(width, weighted_width))
+        print("height: %s - SCORE: %s" %(height, weighted_height))
+        print("Reference Level: %s - SCORE: %s" %(reference_level, weighted_ref_level))
+        print("==========================================================================")
+        print("Total SCORE: %s" %(combined_score))
+        print("")
 
     return combined_score
 
@@ -446,7 +449,7 @@ def compute_area(box):
     return width * height
 
 
-def find_and_merge_high_iou_boxes(boxes, threshold=0.6, size_diff_threshold=0.2, info = None):
+def find_and_merge_high_iou_boxes(boxes,info, threshold=0.6, size_diff_threshold=0.2):
     """
     Find and merge boxes with high IoU, taking size difference into account.
     
@@ -474,9 +477,15 @@ def find_and_merge_high_iou_boxes(boxes, threshold=0.6, size_diff_threshold=0.2,
                         score_j = info[j][-1]
                         if score_j > score_i:
                             del boxes[i]
+                            del info[i]
+                            num_boxes = len(boxes)
+                            break
                         elif score_i > score_j:
                             del boxes[j]
-    return boxes
+                            del info[j]
+                            num_boxes = len(boxes)
+                            break
+    return boxes, info
 
 def calculate_percentage_black_pixels(image):
     # Check if the image is a color image (3 channels) or a grayscale image (1 channel)
@@ -588,7 +597,7 @@ def match_graph_with_las(file_path,class_dict, nodes, getResources=True,getNorma
     if getResources:
         # print(f'processing {ut.get_filename(file_path)}...')      
         las = laspy.read(file_path) 
-        pcd=gmu.las_to_pcd(las) 
+        pcd=gmu.las_to_pcd(las)
         pcd.estimate_normals() if getNormals else None
         
         #match pcd to nodes
