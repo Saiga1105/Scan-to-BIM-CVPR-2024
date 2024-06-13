@@ -39,53 +39,55 @@ def parse_json(file,objects_dict):
         print("Failed to decode JSON:", e)
     except Exception as e:
         print("An error occurred:", e)
-    
     for item in data:
-        item_class = file.split('/')[-1].split('.')[0].split('_')[-1]    
-        source='_'.join(file.split('/')[-1].split('.')[0].split('_')[0:-1])
-        # Collect details based on type
-        if item_class == 'columns':
-            objects_dict[item['id']] = {
-                'type': item_class,
-                'width': item['width'],
-                'depth': item['depth'],
-                'height': item['height'],
-                'loc': item['loc'],
-                'rotation': item['rotation'],
-                'source':source
-            }
-            column=create_column(objects_dict[item['id']])
-            objects_dict[item['id']]['resource'] = column 
+        try:
+            item_class = file.split('/')[-1].split('.')[0].split('_')[-1]    
+            source='_'.join(file.split('/')[-1].split('.')[0].split('_')[0:-1])
+            # Collect details based on type
+            if item_class == 'columns':
+                objects_dict[item['id']] = {
+                    'type': item_class,
+                    'width': item['width'],
+                    'depth': item['depth'],
+                    'height': item['height'],
+                    'loc': item['loc'],
+                    'rotation': item['rotation'],
+                    'source':source
+                }
+                column=create_column(objects_dict[item['id']])
+                objects_dict[item['id']]['resource'] = column 
 
-        elif item_class == 'doors':
-            objects_dict[item['id']] = {
-                'type': item_class,
-                'width': item['width'],
-                'depth': item['depth'],
-                'height': item['height'],
-                'loc': item['loc'],
-                'rotation': item['rotation'],
-                'host_id': item['host_id'],
-                'source':source
-            }
-            door=create_door(objects_dict[item['id']])     
-            objects_dict[item['id']]['resource'] = door     
+            elif item_class == 'doors':
+                objects_dict[item['id']] = {
+                    'type': item_class,
+                    'width': item['width'],
+                    'depth': item['depth'],
+                    'height': item['height'],
+                    'loc': item['loc'],
+                    'rotation': item['rotation'],
+                    'host_id': item['host_id'],
+                    'source':source
+                }
+                door=create_door(objects_dict[item['id']])     
+                objects_dict[item['id']]['resource'] = door     
 
-        elif item_class == 'walls':
-            objects_dict[item['id']] = {
-                'type': item_class,
-                'start_pt': item['start_pt'],
-                'end_pt': item['end_pt'],
-                'width': item['width'],
-                'height': item['height'],
-                'neighbor_wall_ids_at_start': item['neighbor_wall_ids_at_start'],
-                'neighbor_wall_ids_at_end': item['neighbor_wall_ids_at_end'],
-                'source':source
-            }
-            line,wall=create_wall( objects_dict[item['id']])
-            objects_dict[item['id']]['line'] = line
-            objects_dict[item['id']]['resource'] = wall   
-
+            elif item_class == 'walls':
+                objects_dict[item['id']] = {
+                    'type': item_class,
+                    'start_pt': item['start_pt'],
+                    'end_pt': item['end_pt'],
+                    'width': item['width'],
+                    'height': item['height'],
+                    'neighbor_wall_ids_at_start': item['neighbor_wall_ids_at_start'],
+                    'neighbor_wall_ids_at_end': item['neighbor_wall_ids_at_end'],
+                    'source':source
+                }
+                line,wall=create_wall( objects_dict[item['id']])
+                objects_dict[item['id']]['line'] = line
+                objects_dict[item['id']]['resource'] = wall   
+        except:
+            continue
+                
     return objects_dict
 
 def create_object_nodes(objects_dict,class_dict):
