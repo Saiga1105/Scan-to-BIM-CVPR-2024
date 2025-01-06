@@ -666,7 +666,9 @@ def merge_wall_nodes(
 def merge_wall_nodes2(
     nodes: List[PointCloudNode],
     threshold_clustering_distance: float = 0.7,
-    threshold_clustering_normals: float = 0.9
+    threshold_clustering_normals: float = 0.9,
+    threshold_clustering_orthogonal_distance: float = 0.1,
+    threshold_clustering_coplanar_distance: float = 5
 ) -> List[PointCloudNode]:
     """
     Merges wall nodes based on spatial and normal vector proximity.
@@ -712,7 +714,7 @@ def merge_wall_nodes2(
      
         #filter on distance    or  orthogonal distance
         orthogonal_distance = np.abs(np.einsum('ij,...j->...i', np.array([n.plane[:3]]), np.asarray(inliers)-np.asarray(joined_pcd.points)[indices] ))[:,0]    
-        indices=indices[((orthogonal_distance<0.1) & (distances<3*threshold_clustering_distance)) |
+        indices=indices[((orthogonal_distance<threshold_clustering_orthogonal_distance) & (distances<threshold_clustering_coplanar_distance)) |
                         (distances<threshold_clustering_distance)]        
         #check if there are any indices left
         if len(indices)==0:
@@ -738,6 +740,9 @@ def merge_wall_nodes2(
             clustered_nodes.append(n)
     
     return clustered_nodes
+
+
+
 
 def create_thrash_node(
     las: Any, 

@@ -40,8 +40,6 @@ def load_levels(laz, graph_path):
     # Separate nodes by type
     ceilings_nodes = [n for n in nodes if 'ceilings' in n.subject.lower() and isinstance(n, PointCloudNode)]
     floors_nodes = [n for n in nodes if 'floors' in n.subject.lower() and isinstance(n, PointCloudNode)]
-    # ceilings_nodes = [n for n in nodes if 'ceilings' in n.class_name.lower() and isinstance(n, PointCloudNode)]
-    # floors_nodes = [n for n in nodes if 'floors' in n.class_name.lower() and isinstance(n, PointCloudNode)]
     # level_nodes = [n for n in nodes if 'level' in n.subject]
     
     floors_z = []
@@ -197,12 +195,8 @@ def compute_bounding_box(points):
 
     # Covariance matrix
     cov = np.cov(points, rowvar=False)
-
-    # Eigenvalues and eigenvectors of the covariance matrix
-    # Eigenvectors {x1,y1, x2, y2} directions of bboxes, Eigenvalues {i1, i2} magnitude of eigenvectors
-    eigenvalues, eigenvectors = LA.eig(cov)
     
-    # apply rotations to the hull
+    # apply rotations to the Hull points
     rot_points = np.dot(rotations, hull_points.T)
 
     # find the bounding points
@@ -251,9 +245,6 @@ def column_features(column_points, bbox, rotation_matrix, floors_z, ceilings_z):
     angle = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
     rotation = np.degrees(angle)
     
-        # If AB direction is along x then rotation = 0
-    # If AB direction vector is along y then  rotation = 90
-
     #  z_values = np.array(points)
     z_values = column_points[:, 2] #np.concatenate([value[:, 2] for value in column_points.values()])
     min_z = np.min(z_values)
@@ -303,49 +294,6 @@ def rotate_points(points, center, rotation_matrix):
 
         return rotated_points
 
-
-##____________________________________
-  # Access points from column_features
-
-def main_direction_bounding_box (bbox, width, depth, rotation):
-
-    A1 = np.array(bbox [0])
-    B1 = np.array(bbox [1])
-    C1 = np.array(bbox [2])
-    D1 = np.array(bbox [3])
-
-    dir_vector = A1 - B1
-
-    # Determine the predominant axis and the sign of the direction
-    if abs(dir_vector[0]) > abs(dir_vector[1]):
-        predominant_axis = 'x'
-        if dir_vector[0] > 0:
-            direction = 'positive'
-            rotation = 180
-            width = width
-            depth = depth
-        else:     
-            direction = 'negative' 
-            rotation = 0
-            width = width 
-            depth = depth 
-    else: 
-        predominant_axis = 'y'
-        if dir_vector[1] > 0:
-            direction = 'positive'
-            rotation = 90
-            width = depth
-            depth = width
-        else:
-            direction = 'negative'
-            rotation = 270
-            width = depth
-            depth = width
-
-    return width, depth, rotation
-
-# ______________________________________________________
-
 def json_export(output_folder, name, key, width, depth, height_column, center, rotation):
 
     #json_file_path = os.path.join(output_folder, f'{ut.get_filename(name)}_columns.json')
@@ -360,7 +308,11 @@ def json_export(output_folder, name, key, width, depth, height_column, center, r
 
     width = np.max([width, 0.10])
     depth = np.max([depth, 0.10])
-    
+    ratio = width / depth    
+
+    if (depth < 0.25 or width < 0.25) or (depth > 1.0 and width > 1.0) or (ratio > 2) or (ratio < 0.5):
+        return
+
     # Construct the new object data
     obj = {
         "id": key,
@@ -368,7 +320,7 @@ def json_export(output_folder, name, key, width, depth, height_column, center, r
         "depth": depth,
         "height": height_column,
         "loc": [center[0], center[1], center[2]],
-        "rotation": rotation # 0 for cvpr, rotation_rounded otherwise
+        "rotation": 0 # 0 for cvpr, rotation_rounded otherwise
     }
 
     # Append the new object to the list of objects
@@ -380,7 +332,9 @@ def json_export(output_folder, name, key, width, depth, height_column, center, r
 
     print("JSON data written to file:", json_file_path)
 
-def column_mesh(points, floor_z, ceiling_z, height, minimum_bounding_box, output_folder, name):  
+    return obj
+
+def column_mesh(points, floor_z, ceiling_z, height, minimum_bounding_box, depth, width, output_folder, name):  
     base_edges = []  
     top_edges = []
     vertical_edges = []
@@ -513,6 +467,22 @@ def column_mesh(points, floor_z, ceiling_z, height, minimum_bounding_box, output
 
     file_name = output_folder / f"{name}.obj"
 
+    ratio = width / depth  
+
+    if (depth < 0.25 or width < 0.25) or (depth > 1.0 and width > 1.0) or (ratio > 2) or (ratio < 0.5):
+        return
+
+    # Write the file if condition is met
+    with open(file_name, "w") as f:
+        for v in vertices:
+            f.write(f'v {v[0]:.3f} {v[1]} {v[2]}\n')
+        # Write faces
+        for face in faces_obj:
+            # Convert face vertices to strings without brackets
+            face_str = ' '.join([str(v) for v in face])
+            f.write(f'f {face_str}\n')
+    print("Obj correctly generated!")
+
    # Create file
     with open(file_name, "w") as f:
         for v in vertices:
@@ -523,34 +493,5 @@ def column_mesh(points, floor_z, ceiling_z, height, minimum_bounding_box, output
             face_str = ' '.join([str(v) for v in face])
             f.write(f'f {face_str}\n')
     print ("Obj correctly generated!")
-
-
-
-
-# ## ___________________________________________________________________________________________________________________
-#   # Function to read the graph
-# def load_TEST_graph(laz, graph_path):
-#     # Parse the graph
-#     graph = Graph().parse(str(graph_path))
-#     nodes = tl.graph_to_nodes(graph)  
-    
-#     # Filter nodes for column nodes
-#     column_nodes = [n for n in nodes if 'columns' in n.subject.lower() and isinstance(n, PointCloudNode)]
-    
-#     if column_nodes:
-#         for n in column_nodes:
-#                 idx = np.where(( laz ['classes']==n.class_id) & ( laz ['objects'] == n.object_id))
-#                 pcd = o3d.geometry.PointCloud()
-#                 pcd.points = o3d.utility.Vector3dVector(laz.xyz[idx])
-#                 n.resource = pcd
-#                 print(f'{len(column_nodes)} columnNodes detected!')
-#                 return graph, nodes, column_nodes
-        
-#     else:
-#         print('No columns detected')
-#         #return graph, nodes, []
-       
-#         return graph, nodes, column_nodes
-    
 
 

@@ -32,6 +32,11 @@ def compute_base_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],t
         else:  
             n.base_constraint=next((n for n in levelNodes if np.absolute(n.height-minheight)<threshold_level_height),levelNodes[np.argmin([np.abs(n.height-minheight) for n in levelNodes ])] ) 
             
+        #CVPR RULES
+        #just take the one closest to height ==0
+        levelNodes.sort(key=lambda x: np.abs(x.height))   
+        n.base_constraint=levelNodes[0]
+        
             
         #compute base offset
         n.base_offset=minheight-n.base_constraint.height
@@ -65,6 +70,10 @@ def compute_top_constraint(wallNodes:List[MeshNode],levelNodes:List[MeshNode],th
         n.height=n.top-n.bottom
         
         #CVPR DOESNT DO OFFSETS
+        #find the next levelnode that is at least 2m above the base constraint
+        levelNodes.sort(key=lambda x: x.height)
+        n.top_constraint=next((k for k in levelNodes if k.height-n.base_constraint.height>2),levelNodes[-1])
+        
         n.height=n.top_constraint.height-n.base_constraint.height if n.top_constraint!=n.base_constraint else n.height
         
         print(f'name: {n.name}, top_constraint: {n.top_constraint.name}, top_offset: {n.top_offset}')
@@ -335,7 +344,7 @@ def walls_to_json(wallNodes: list[MeshNode]) -> Dict:
             "start_pt": list(np.asarray(n.axis.points)[0]),
             "end_pt": list(np.asarray(n.axis.points)[1]),
             "width": n.wallThickness,
-            "height": n.height,                           
+            "height": n.height+0.1,      #CVPR                     
             "neighbor_wall_ids_at_start": n.neighbor_wall_ids_at_start,
             "neighbor_wall_ids_at_end": n.neighbor_wall_ids_at_end,
             })
@@ -550,8 +559,8 @@ def trim_and_extend_wall_nodes(wallNodes: List[Node], t_trim: float = 0.2,t_exte
        
             #filter None values
             intersection_points=[l for l in intersection_points if l is not None]
-            # node.intersection_points = intersection_points
             
+            #do this in case there is only 1 intersection point
             if len(intersection_points) == 1:
                 # If there is only one intersection point, determine if it is closer to the start or end point
                 distances = np.abs([
@@ -560,7 +569,7 @@ def trim_and_extend_wall_nodes(wallNodes: List[Node], t_trim: float = 0.2,t_exte
                 ])
                 
                 # Find the index of the closest point and check if it is within the threshold
-                index = np.argmin(distances) if np.min(distances) < t_trim else None
+                index = np.argmin(distances) if np.min(distances) < t_trim else None #t_trim   #this is a bit strange, normally we should split t_trim_and t_extend
                 if index is not None:
                     # Replace the axis point at the index with the intersection point
                     axis_points = np.asarray(node.new_axis.points)
@@ -576,7 +585,8 @@ def trim_and_extend_wall_nodes(wallNodes: List[Node], t_trim: float = 0.2,t_exte
                         node.neighbor_wall_ids_at_start.append(neigboring_walls[0])
                     else:
                         node.neighbor_wall_ids_at_end.append(neigboring_walls[0])
-            
+                        
+            #else, do this is there are multiple intersection points
             else:
                 # Compute distances from the start and end points to all intersection points
                 distances_start = np.array([np.linalg.norm(node.axis.points[0] - l) for l in intersection_points])

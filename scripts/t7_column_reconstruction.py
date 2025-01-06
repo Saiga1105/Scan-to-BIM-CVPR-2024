@@ -20,7 +20,8 @@ from utils import t7_utils
 plot = False
 
 ## INPUTS and OUTPUTS
-name = '08_ShortOffice_01_F1_small_pred' # Name of the test files
+name = '34_Parking_04_F1_small_pred' # Name of the 7 test files
+# '08_ShortOffice_01_F1_small_pred'
 # '08_ShortOffice_01_F2_small_pred'
 # '11_MedOffice_05_F2_small_pred'
 # '11_MedOffice_05_F4_small_pred'
@@ -182,8 +183,8 @@ with open(output_file_path, "w") as output_file:
         output_file.write(f'Column: {key}\n Width: {width}\n Depth: {depth}\n Height: {height_column}\n loc: {center} rotation {rotation}\n')
         print(f'Column: {key}\n Width: {width}\n Depth: {depth}\n Height: {height_column}\n loc: {center} rotation {rotation}\n')
         json_object_info = t7_utils.json_export(output_folder, name, key, width, depth, height_column, center, rotation)
-        
-        t7_utils.column_mesh(columns_points[key], min_z, max_z, height_column, minimum_oriented_box, output_folder, f"{name}_{key}")
 
+        t7_utils.column_mesh(columns_points[key], min_z, max_z, height_column, minimum_oriented_box, depth, width, output_folder, f"{name}_{key}")
+     
 
 
