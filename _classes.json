@@ -1,0 +1,53 @@
+{
+    "classes": [
+        {
+            "name": "unassigned",
+            "id": 255,
+			"temp_id":0,
+            "color": "#9da2ab"
+        },
+		{
+            "name": "floors",
+            "id": 0,
+			"temp_id":1,
+            "color": "#03c2fc"
+		},
+        {
+            "name": "ceilings",
+            "id": 1,
+			"temp_id":2,
+            "color": "#e81416"
+        },
+		{
+            "name": "walls",
+            "id": 2,
+			"temp_id":3,
+            "color": "#ffa500"
+        },
+		{
+            "name": "columns",
+            "id": 3,
+			"temp_id":4,
+            "color": "#faeb36"
+        },
+        {
+            "name": "doors",
+            "id": 4,
+			"temp_id":5,
+            "color": "#79c314"
+        },
+        {
+            "name": "beams",
+            "id": 5,
+			"temp_id":6,
+            "color": "#79c314"
+        }
+    ],
+    "default": 255,
+    "type": "semantic_segmentation",
+    "format": "kitti",
+    "created_with": {
+        "name": "Saiga",
+        "version": "1.0.1"
+    }
+}
